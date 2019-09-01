@@ -1,0 +1,93 @@
+#include "/EasyCoding/EasyCoding.nxc"
+#define MOTX OUT_A
+#define MOTY OUT_B
+#define LS S1 //Light Sensor
+#define TSX S2 //Touch Sensor X
+#define TSY S3 //Touch Sensor Y
+
+void Status(string str);
+bool saveLight(byte input);
+void Reset();
+void Scan();
+void Show();
+
+bool line[100]; //Array with points
+int pos = 0; //Pos in Array
+
+task main() {
+ //Setup
+ ClearScreen();
+ SetSensorLight(LS);
+ SetSensorTouch(TSX);
+
+ for(int i = 0; i < 100; i++) {
+  line[i] = true;
+ };
+
+ Reset();
+ Scan();
+ Show();
+
+ Status("Finished!");
+ while(true) { Wait(1000); };
+}
+
+//==============================================================================
+//Light To Bool
+bool saveLight(byte input) {
+ if(input < 50){
+  //Black
+  return true;
+ } else {
+  //White
+  return false;
+ };
+};
+//==============================================================================
+void Status(string str) {
+ CenterTextOut(LCD_LINE8, str);
+};
+//==============================================================================
+void Reset() { //Reset to starting position
+ if(Sensor(TSX)) {
+  fin:
+   OnFwd(MOTX, 50);
+   Wait(6000);
+   Off(MOTX);
+ } else {
+  OnRev(MOTX, 50);
+  while(Sensor(TSX) != true) { Wait(10); };
+  Off(MOTX);
+  goto fin;
+ };
+};
+//==============================================================================
+void Scan() {//Scan-Routine
+ OnRev(MOTX, 50);
+ while(Sensor(TSX) == 0) {//While not touching
+  line[pos] = saveLight(Sensor(LS));
+  if(line[pos]) {
+   //PointOut(pos, DISPLAY_HEIGHT-5, DRAW_OPT_NORMAL);
+   LineOut(pos, 58, pos, 63, DRAW_OPT_NORMAL);
+  } else {
+   //PointOut(pos, DISPLAY_HEIGHT-5, DRAW_OPT_CLEAR);
+   LineOut(pos, 58, pos, 63, DRAW_OPT_CLEAR);
+  };
+  pos = pos + 1;
+  Wait(55);
+ }
+ Off(MOTX);
+};
+//==============================================================================
+void Show() {
+ ClearScreen();
+ for(int i = 0; i <= 99; i++) {
+  if(line[i]) {
+   LineOut(i, 58, i, 63, DRAW_OPT_NORMAL);
+   //PointOut(i, 58, DRAW_OPT_NORMAL);
+  } else {
+   LineOut(i, 58, i, 63, DRAW_OPT_CLEAR);
+   //PointOut(i, 58, DRAW_OPT_CLEAR);
+  };
+ };
+};

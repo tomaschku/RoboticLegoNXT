@@ -1,0 +1,7 @@
+BT Direct NXT - http://www.robotappstore.com/Knowledge-Base/How-to-send-commands-to-Lego-NXT/37.html
+NXC Sample Programs - http://bricxcc.sourceforge.net/nbc/nxcsamples/index.html
+Motor Regulation - http://nxt-firmware.ni.fr.eu.org/changes/absolute_position_regulation/
+
+http://botbench.com/blog/
+http://www.monobrick.dk/software/monobrick/
+https://www.debacher.de/wiki/NXC

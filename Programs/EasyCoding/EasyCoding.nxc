@@ -1,0 +1,333 @@
+//The Error "task main not found" is normal! DO NOT ADD MAIN HERE!
+
+#define LCD_WIDTH DISPLAY_WIDTH //100
+#define LCD_HEIGHT DISPLAY_HEIGHT //64
+#define CHAR_HEIGHT 8
+#define CHAR_WIDTH 5
+#define CHARS_PER_ROW 16
+#define CHARS_PER_COLUMN 8
+#define LU 0
+#define RU 0
+#define LD 0
+#define RD 0
+
+/*******************************************************
+ *     NOTE: When editing Values, always call the      *
+ * Correcture-Functions, so that all Values are legal. *
+ *Also, the in C++ standardized :: operator is (because*
+ *  of the limitations of NXC) replaced with _. This   *
+ * operator is also used for all other structs in this *
+ *                        file.                        *
+ *******************************************************/
+ 
+int ERR = 0;
+
+/*******************************************************
+ *                      RECTANGLE                      *
+ *******************************************************/
+struct Rect {//(Default) From the Left-Top Corner
+ int X;
+ int Y;
+ int X2;
+ int Y2;
+ int width;
+ int height;
+};
+  //Correcture-Functions
+void Rect_X(Rect &in)      { in.X = in.X2 - in.width;  };
+void Rect_Y(Rect &in)      { in.Y = in.Y2 - in.height; };
+void Rect_X2(Rect &in)     { in.X2 = in.X + in.width;  };
+void Rect_Y2(Rect &in)     { in.Y2 = in.Y + in.height; };
+void Rect_width(Rect &in)  { in.width = in.X2 - in.X;  };
+void Rect_height(Rect &in) { in.height = in.Y2 - in.Y; };
+//=======================================================================================================
+void Rect_RInit(Rect &in, int X, int Y, int width, int height)
+{//Relative Init
+ in.X = X;
+ in.Y = Y;
+ in.width = width;
+ in.height = height;
+ Rect_X2(in);
+ Rect_Y2(in);
+};
+void Rect_AInit(Rect &in, int X, int Y, int X2, int Y2)
+{//Absolute Init
+ in.X = X;
+ in.Y = Y;
+ in.X2 = X2;
+ in.Y2 = Y2;
+ Rect_width(in);
+ Rect_height(in);
+};
+//=======================================================================================================
+bool Rect_RMove(Rect &in, int XMOV, int YMOV)
+{
+ //Relative Move
+ if(XMOV > 100 || XMOV < -100 || YMOV > 64 || YMOV < -64) { ERR = 100; return false; };
+ int Nextx = in.X + XMOV;
+ if(Nextx > 100 || Nextx < -100) { ERR = 101; return false; };
+ int Nexty = in.Y + YMOV;
+ if(Nexty > 60 || Nexty < -60) { ERR = 102; return false; };
+
+ in.X = Nextx;
+ Rect_X2(in);
+ 
+ in.Y = Nexty;
+ Rect_Y2(in);
+ return true;
+};
+//=======================================================================================================
+bool Rect_AMove(Rect &in, int X, int Y)
+{
+ //Absolute Move
+ if(X < 0 || Y < 0 || X > DISPLAY_WIDTH || Y > DISPLAY_HEIGHT) { ERR = 110; return false; };
+ in.X = X;
+ Rect_X2(in);
+ if(in.X2 > DISPLAY_WIDTH) { in.X2 = DISPLAY_WIDTH; };
+ in.Y = Y;
+ Rect_Y2(in);
+ if(in.Y2 > DISPLAY_HEIGHT) { in.Y2 = DISPLAY_HEIGHT; };
+ return true;
+};
+//=======================================================================================================
+bool Rect_RResize(Rect &in, int Nwidth, int Nheight)
+{
+ //Relative Resize
+ if(Nwidth > DISPLAY_WIDTH - (in.X + in.width) || Nheight > DISPLAY_HEIGHT - (in.Y + in.height)) { ERR = 120; return false; };
+ in.width = Nwidth;
+ in.height = Nheight;
+ Rect_X2(in);
+ Rect_Y2(in);
+ return true;
+};
+//=======================================================================================================
+bool Rect_AResize(Rect &in, int X2, int Y2)
+{
+ //Absolute Resize
+ if(X2 < in.X || X2 > DISPLAY_WIDTH || Y2 < in.Y || Y2 > DISPLAY_HEIGHT) { ERR = 130; return false; };
+ in.X2 = X2;
+ in.Y2 = Y2;
+ Rect_width(in);
+ Rect_height(in);
+ return true;
+};
+//=======================================================================================================
+void Rect_Reset(Rect &in)
+{
+ in.X = 0;
+ in.Y = 0;
+ in.X2 = 0;
+ in.Y2 = 0;
+ in.width = 0;
+ in.height = 0;
+};
+//=======================================================================================================
+void Rect_Printable(Rect &out, Rect in)
+{
+ out.Y = 63 - in.Y; //63 = Zero based
+ out.Y2 = 63 - in.Y2;
+};
+//=======================================================================================================
+void Rect_Print(Rect in, bool prepared)
+{
+ Rect ToPrint;
+ if(!prepared) {
+  Rect_Printable(ToPrint, in);
+ } else {
+  ToPrint = in;
+ };
+ RectOut(ToPrint.X, ToPrint.Y, ToPrint.width, ToPrint.height);
+};
+//=======================================================================================================
+bool Rect_Overlap(Rect rA, Rect rB) {
+ if (rA.X <= rB.X2 && rA.X2 >= rB.X && rA.Y >= rB.Y2 && rA.Y2 <= rB.Y) {
+  return true;
+ } else {
+  return false;
+ };
+};
+/*******************************************************
+ *                    END RECTANGLE                    *
+ *******************************************************
+ *                        MISC                         *
+ *******************************************************/
+
+long map(long x, long in_min, long in_max, long out_min, long out_max); //Prototype for rnd()
+
+long rnd(long min, long max)
+{
+ return map(rand(), 0, RAND_MAX, min, max);
+};
+//=======================================================================================================
+bool between(int min, int max, int num)
+{
+ if(num < min && num > max) { return true; } else { return false; };
+};
+//=======================================================================================================
+long map(long x, long in_min, long in_max, long out_min, long out_max)
+{
+  return (x - in_min) * (out_max - out_min + 1) / (in_max - in_min + 1) + out_min;
+};
+//=======================================================================================================
+long limit(int min, int max, int num)
+{
+ if(num < min) { return min; };
+ if(num > max) { return max; };
+ return num;
+};
+//=======================================================================================================
+int min(int a, int b)
+{
+ return a < b ? a : b;
+};
+//=======================================================================================================
+int max(int a, int b)
+{
+ return a > b ? a : b;
+};
+//=======================================================================================================
+bool getBTN_EXIT_FLAG() { return AbortFlag(); };
+void BTN_EXIT_FLAG(bool wait_before_exit) //If true, it waits 2 Seconds before exiting
+{
+ SetLongAbort(wait_before_exit);
+};
+//=======================================================================================================
+bool BTNPRESSED(unsigned int btn, bool reset = false)
+{
+ switch (btn) {
+  case BTNEXIT:
+   if(getBTN_EXIT_FLAG()) {
+    return ButtonPressed(BTNEXIT, reset);
+   } else {
+    return false; //False, because if Long-Press is disabled, it cannot be pressed
+   };
+   break;
+  case BTNRIGHT:
+  case BTNLEFT:
+  case BTNCENTER:
+   return ButtonPressed(btn, reset);
+   break;
+ }
+};
+//=======================================================================================================
+bool str_isEmpty(string str)
+{
+ return StrLen(str) == 0;
+};
+//=======================================================================================================
+int str_find_first_not(string str, char sym)
+{
+ if(str_isEmpty(str)) { return 0; };
+ int pos = 0;
+ char s_sym[];
+ s_sym[0] = sym;
+ 
+ for(int i = 0; i < StrLen(str); i++) {
+  if(SubStr(str, i, 1) == s_sym) { pos = i; } else { break; };
+ }
+ 
+ return pos;
+};
+//=======================================================================================================
+int str_find_last_not(string str, char sym)
+{
+ if(str_isEmpty(str)) { return 0; };
+ int pos = 0;
+ char s_sym[];
+ s_sym[0] = sym;
+ 
+ for(int i = StrLen(str); i >= 0; i--) {
+  if(SubStr(str, i, 1) == s_sym) { pos = i; } else { break; };
+ }
+ 
+ return pos;
+};
+//=======================================================================================================
+string str_trim(string str)
+{
+ if(str_isEmpty(str)) { return ""; };
+ string new = "";
+ 
+ int startpos = str_find_first_not(str, " ");
+ int endpos = str_find_last_not(str, " ");
+ new = SubStr(str, startpos, endpos-startpos+1 );
+
+ return new;
+};
+//=======================================================================================================
+bool CenterTextOut(int y, string txt) {
+ if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 5; return false; };
+ TextOut((LCD_WIDTH-StrLen(txt)*CHAR_WIDTH)/2-5, y, txt);
+ return true;
+};
+//=======================================================================================================
+string CenterText(string txt) {
+ if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 5; return ""; };
+ string str = "";
+ 
+ for(int i = 0; i <= (LCD_WIDTH-StrLen(txt)*CHAR_WIDTH)/2-5/CHAR_WIDTH; i++) {
+	 str = str + " ";
+ };
+ 
+ return str + txt;
+};
+//=======================================================================================================
+bool RightTextOut(int y, string txt) {
+ if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 5; return false; };
+ TextOut(LCD_WIDTH-(StrLen(txt)*CHAR_WIDTH+5), y, txt);
+ return true;
+};
+//=======================================================================================================
+string RightText(string txt) {
+ if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 5; return ""; };
+ string str = "";
+ 
+ for(int i = 0; i <= (LCD_WIDTH-(StrLen(txt)*5+5/CHAR_WIDTH)); i++) {
+	 str = str + " ";
+ };
+ 
+ return str + txt;
+};
+//=======================================================================================================
+int GetNumber(string msg, int min, int max, int switching_time = 100) {//Inclusive
+ int value = (max+min)/2; //Average them at the start
+
+ while(!BTNPRESSED(BTNCENTER)) {
+  CenterTextOut(LCD_LINE4, msg);
+  CenterTextOut(LCD_LINE5, NumToStr(value));
+  
+  while(BTNPRESSED(BTNRIGHT)) {
+   value++;
+   Wait(switching_time);
+  };
+  
+  while(BTNPRESSED(BTNLEFT)) {
+   value--;
+   Wait(switching_time);
+  };
+  
+  //Endless loop
+  if (min > value) value = max;
+  if (value > max) value = min;
+ };
+  
+ while(BTNPRESSED(BTNCENTER)) { Wait(10); }; //No accidental press after function
+ return value;
+};
+//=======================================================================================================
+unsigned long getProgramRuntime() {
+ return CurrentTick() - FirstTick();
+};
+//=======================================================================================================
+bool Bit_Read(unsigned long number, byte idx) {
+ if(idx > 32) { return number; };
+ return (number >> idx) & 1;
+};
+unsigned long Bit_Write(unsigned long number, byte idx, bool state) {
+ if(idx > 32) { return number; };
+ return (number & ~(1 << idx)) | (state << idx);
+};
+unsigned long Bit_Toggle(unsigned long number, byte idx) {
+ if(idx > 32) { return number; };
+ return number ^ (1 << idx);
+};

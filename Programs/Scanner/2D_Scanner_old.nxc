@@ -1,0 +1,142 @@
+//RotateMotor(MOTX, -50, 85); //1 cm
+
+#include "../EasyCoding/EasyCoding.nxc"
+#define MOTX OUT_A
+#define MOTY OUT_B
+#define LS S1 //Light Sensor
+#define TSX S2 //Touch Sensor X
+#define TSY S3 //Touch Sensor Y
+
+#define SCAN_X 33 //How many times to scan in X-Axe
+#define LineWidth 3 //How wide the pixel should be (Search for algorithm to auto-calculate)
+
+void Status(string str);
+bool saveLight(byte input);
+
+void Reset();
+void Scan();
+void Show();
+
+struct _Pos {
+ int X;
+ int Y;
+};
+
+_Pos pos;
+bool area[][]; // [X] [Y]
+bool _line[64];
+
+task main() {
+ //Setup
+ ClearScreen();
+ SetSensorLight(LS);
+ SetSensorTouch(TSX);
+ SetSensorTouch(TSY);
+
+ //Fill area with 100x "64 Arrays"
+ ArrayInit(area, _line, 100); //Direct save to 2D
+
+ //Execution Flow
+ Reset();
+ Scan();
+ Show();
+
+ while(true) { Wait(1000); };
+};
+
+//==============================================================================
+void Reset() {
+ Status("Reset - Y");
+
+ OnFwd(MOTY, 100);
+ while(!Sensor(TSY)) {Wait(10);};
+ OnRev(MOTY, 100);
+ Wait(1820);
+ Off(MOTY);
+
+ Status("Reset - X");
+ if(Sensor(TSX)) {
+  fin:
+   OnFwd(MOTX, 100);
+   Wait(2220);
+   Off(MOTX);
+ } else {
+  OnRev(MOTX, 100);
+  while(Sensor(TSX) != true) { Wait(10); };
+  goto fin;
+ };
+};
+//==============================================================================
+void Scan() {//Scan-Routine
+ Status("Scanning");
+
+ for(int x=0; x < SCAN_X; x++) {
+  if(Sensor(TSX) == 1) { break; };
+ 
+  OnFwd(MOTY, 75); //50    75=X+3
+  while(Sensor(TSY) == 0 && pos.Y < 64 && Sensor(TSX) == 0/*Else X-Break doesn't work*/) {//While not touching
+   area[pos.X][pos.Y] = saveLight(Sensor(LS));
+   if(area[pos.X][pos.Y]==1) {
+    LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_NORMAL);
+   } else {
+    LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If Buffer for testing is inverted
+   };
+   //DEBUG-PRINT
+   //CenterTextOut(LCD_LINE4, "Pos.Y: " + NumToStr(pos.Y));
+   //CenterTextOut(LCD_LINE5, "Pos.X: " + NumToStr(pos.X));
+   pos.Y = pos.Y + 1;
+   Wait(35); //60      35=X*3
+  }
+  pos.Y = 0;
+  Off(MOTY);
+  
+  //Move Y Axe
+  OnFwd(MOTY, 100);
+  while(!Sensor(TSY)) {Wait(10);};
+  OnRev(MOTY, 100);
+  Wait(1800);
+  Off(MOTY);
+  
+  //Move X Axe
+  RotateMotor(MOTX, -50, 60);
+  pos.X = pos.X + 1;
+ };
+ pos.X = 0;
+};
+//==============================================================================
+void Show() {
+ Status("Showing results");
+ for(int x = 0; x < SCAN_X; x++) {
+  for(int y = 0; y < 64; y++) {
+   if(area[x][y]==1) {
+    LineOut(x * LineWidth, y, (x * LineWidth) + (LineWidth-1), y, DRAW_OPT_NORMAL);
+   } else {
+    LineOut(x * LineWidth, y, (x * LineWidth) + (LineWidth-1), y, DRAW_OPT_CLEAR);
+   };
+  };
+ };
+};
+
+
+
+
+
+
+
+
+//==============================================================================
+//Light To Bool
+bool saveLight(byte input) {
+ if(input < 70){
+  //Black
+  return true;
+ } else {
+  //White
+  return false;
+ };
+};
+//==============================================================================
+void Status(string str) {
+ ClearScreen();
+ CenterTextOut(LCD_LINE8, str);
+};

@@ -1,0 +1,138 @@
+#download "map1.txt" // download level map(s)
+#download "items.rs" // compile and download RICScript
+
+#define K_WALLFLOOR     0
+#define K_LADDER        3
+#define K_PLAYER        4
+#define K_GOTCHECKPOINT 7
+#define K_AIR           9
+
+#define PC_X_IDX 160
+#define PC_Y_IDX 161
+
+#define NUM_ROWS 10
+#define NUM_COLS 16
+
+#define ROW_HEIGHT 6
+#define COL_WIDTH  6
+#define LCD_HEIGHT 64
+
+#define REDRAW_INTERVAL 150
+#define MOVE_INTERVAL   250
+
+// contents of the current level map
+int map[NUM_COLS][NUM_ROWS];
+
+// extra 2 elements are player x/y LCD coordinates
+byte map_buf[NUM_ROWS*NUM_COLS+2];
+
+// player coordinates in map
+LocationType pMC;
+bool UpdateScreen = false;
+
+inline void ReportError(const string & level) {
+  TextOut(0, LCD_LINE1, "Error loading");
+  TextOut(0, LCD_LINE2, level);
+  PlayTone(TONE_A4, SEC_1);
+  Wait(SEC_3);
+  Stop(true);
+}
+
+void LoadLevel(const string & level) {
+  byte handle;
+  unsigned int fsize;
+  if(OpenFileRead(level,fsize,handle)==LDR_SUCCESS) {
+    int idx = 0;
+    for(int row=0; row<NUM_ROWS; row++) {
+      string str;
+      ReadLnString(handle, str);
+
+      for(int col=0; col<NUM_COLS; col++) {
+        int i = str[col]-'0';
+        if (i == K_PLAYER) {
+          pMC.X = col;
+          pMC.Y = row;
+          i = K_GOTCHECKPOINT;
+        }
+        map[col][row] = i;
+        // copy to map_buf for drawing purposes
+        map_buf[idx] = i;
+        idx++;
+      }
+    }
+  }
+  else
+    ReportError(level);
+}
+
+inline void MovePlayerRight() {
+  pMC.X++;
+  UpdateScreen = true;
+}
+
+inline void MovePlayerLeft() {
+  pMC.X--;
+  UpdateScreen = true;
+}
+
+inline void MovePlayerUp() {
+  pMC.Y--;
+  UpdateScreen = true;
+}
+
+inline void MovePlayerDown() {
+  pMC.Y++;
+  UpdateScreen = true;
+}
+
+task ControlThread() {
+  while(true) {
+    // check right
+    if (ButtonPressed(BTNRIGHT, true)) {
+      if (map[pMC.X + 1][pMC.Y] != K_WALLFLOOR &&
+          map[pMC.X + 1][pMC.Y + 1] != K_AIR)
+        MovePlayerRight();
+    }
+    // check left
+    if (ButtonPressed(BTNLEFT, true)) {
+      if (map[pMC.X - 1][pMC.Y] != K_WALLFLOOR &&
+          map[pMC.X - 1][pMC.Y + 1] != K_AIR)
+        MovePlayerLeft();
+    }
+    // check up
+    if (ButtonPressed(BTNCENTER, true)) {
+      if (map[pMC.X][pMC.Y] == K_LADDER &&
+          map[pMC.X][pMC.Y-1] != K_WALLFLOOR)
+        MovePlayerUp();
+    }
+    // check down
+    if (ButtonPressed(BTNEXIT, true)) {
+      if (map[pMC.X][pMC.Y+1] == K_LADDER)
+        MovePlayerDown();
+    }
+    Wait(MOVE_INTERVAL);
+  }
+}
+
+task DrawToScreen() {
+  while (true) {
+    if (UpdateScreen) {
+      map_buf[PC_X_IDX] = pMC.X*COL_WIDTH;
+      map_buf[PC_Y_IDX] = LCD_HEIGHT-ROW_HEIGHT-(pMC.Y*ROW_HEIGHT);
+      GraphicOutEx(0, 0, "Items.ric", map_buf, true);
+      UpdateScreen = false;
+    }
+    Wait(REDRAW_INTERVAL);
+  }
+}
+
+task main()
+{
+  Precedes(DrawToScreen, ControlThread);
+  // enable use of escape button for moving down
+  SetLongAbort(true);
+  UpdateScreen = true;
+  // load level 1
+  LoadLevel("map1.txt");
+}
+

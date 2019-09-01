@@ -1,0 +1,88 @@
+﻿//The prefix "-" means that these functions have not been tested
+//Prefixes "R" and "A" mean "Relative" and "Absolute" respectively
+
+ --> CONSTANTS:
+       LCD_WIDTH = 100 px
+      LCD_HEIGHT = 64  px
+     CHAR_HEIGHT = 8   px
+      CHAR_WIDTH = 5   px
+   CHARS_PER_ROW = 16        //Max. 16 Characters in a Row
+CHARS_PER_COLUMN = 8         //Max. 8 Characters in a Column
+
+ --> STRUCTS:
+Rect{X, Y, X2, Y2, width, height}
+
+  -> FUNCTIONS:
+void Rect_X         (Rect &in) //Calculate X
+void Rect_Y         (Rect &in) //Calculate Y
+void Rect_X2        (Rect &in) //Calculate X2
+void Rect_Y2        (Rect &in) //Calculate Y2
+void Rect_width     (Rect &in) //Calculate width
+void Rect_height    (Rect &in) //Calculate height
+
+void Rect_RInit     (Rect &in, int X, int Y, int width, int height) //Calculates X2 and Y2 automatically
+void Rect_AInit     (Rect &in, int X, int Y, int X2, int Y2) //Calculates width and height automatically
+void Rect_Reset     (Rect &in) //Sets everything to 0
+-void Rect_Printable(Rect &out, Rect in) //Changes the Origin for printing (Origin = 0,0 point)
+-void Rect_Print    (Rect in, bool prepared) //Prints to Screen
+
+/* Movement and Sizing Function are valualy restricted to the Screensize */
+
+bool Rect_RMove     (Rect &in, int XMOV, int YMOV) //Movement in Pixels, ± supported
+bool Rect_AMove     (Rect &in, int X, int Y) //Sets to given position, directly
+bool Rect_RResize   (Rect &in, int Nwidth, int Nheight) //Resizes (calculates X2 and Y2)
+bool Rect_AResize   (Rect &in, int X2, int Y2) //Resizes (calculates width and height)
+-bool Rect_Overlap  (Rect rA, Rect rB) //Checks, if two Rects overlap
+
+ --> EXTRA FUNCTIONS:
+long    rnd              (long min, long max) //RNG - Parameter inclusive
+
+bool   between           (int min, int max, int num) //True, if min > num > max (min/max exclusive!)
+long   map               (long x, long in_min, long in_max, long out_min, long out_max) //Remaps value, so it fits to the specified range
+long   limit             (int min, int max, int num) //Cuts off Values beyond range (if num > max then return max)
+int    min               (int a, int b) //Returns smaller Number
+int    max               (int a, int b) //Returns bigger Number
+
+bool   getBTN_EXIT_FLAG  () //Returns the AbortFlag (Used to check if the Grey/Exit Button can be used by the program)
+void   BTN_EXIT_FLAG     (bool wait_before_exit) //If true, it has to be pressed at least 2 Seconds long to exit the program
+bool   BTNPRESSED        (unsigned int btn, bool reset = false) //Alias for ButtonPressed; "reset count" ist normally inactive
+
+void   pause             (int btn = BTNCENTER, int check_delay = 10) //Waits for Button press
+
+bool   str_isEmpty       (string str) //Equivalent of "StrLen == 0"
+int    str_find_first_not(string str, char sym) //Finds the first position, where char != sym (Used by str_trim)
+int    str_find_last_not (string str, char sym) //Finds the last position, where char != sym (Used by str_trim)
+-string str_trim         (string str) //Trims leading/trailing spaces off
+
+bool   CenterTextOut     (int y, string txt) //Prints centered text to screen
+string CenterText        (string txt) //Returns centered text
+bool   RightTextOut      (int y, string txt) //Prints rightmost text to screen
+string RightText         (string txt) //Returns rightmost text
+bool   ScreenOut         (string txt[]) //Zero-based array; Each element is a row of characters
+
+-int    GetNumber           (string msg, int min, int max, int switching_time = 100) //Get a Number from the User - Parameters inclusive
+
+-unsigned long getProgramRuntime() //Time in Ticks from Program start
+
+-bool Bit_Read(unsigned long number, byte idx)
+-unsigned long Bit_Write(unsigned long number, byte idx, bool state)
+-unsigned long Bit_Toggle(unsigned long number, byte idx)
+
+ --> ERROR HANDLING
+int ERR = Error Number
+
+Codes   |   Text
+--------|-------
+    0   | No Error
+    5   | (Center|Right)Text(Out): Length of txt is > 16 or 0
+    6   | ScreenOut: Arraylength of txt is not equal to 8
+    7   | ScreenOut: A string in txt is longer than 16
+   100  | Rect_RMove: XMOV or YMOVE out of Screen
+   101  | Rect_RMove: XMOV would move Rect out of Screen
+   102  | Rect_RMove: YMOV would move Rect out of Screen
+   110  | Rect_AMove: X or Y out of Screen
+   120  | Rect_RResize: Nwidth or Nheight are resizeing out of Screen
+   130  | Rect_AResize: X or Y out of Screen
+     | 
+     | 
+     | 

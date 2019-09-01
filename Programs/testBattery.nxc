@@ -1,0 +1,76 @@
+task main()
+{
+   /*string Volts[8];
+   for(int i=0; i < 8; i++)
+   {
+      Volts[i] = "";
+   };
+   unsigned int mVolt = 0;
+   unsigned int old_mVolt = 0;
+   
+   while(true) {
+      old_mVolt = mVolt;
+      mVolt = BatteryLevel();
+      if(old_mVolt == mVolt) { continue; };
+      
+      for(int i=6;i>=0;i--)
+      {
+         Volts[i+1] = Volts[i];
+      }
+      Volts[0] = FormatNum("%d", mVolt/1000) + FormatNum(".%03dV", mVolt%1000);
+      
+      ClearScreen();
+      for(int i=0;i<8;i++)
+      {
+         TextOut(0, i*8, Volts[i]);
+      };
+   }*/
+   
+   string Volts[16];
+   for(int i=0; i < 16; i++)
+   {
+      Volts[i] = "";
+   };
+   unsigned int mVolt = 0;
+   unsigned int old_mVolt = 0;
+
+   while(true) {
+      old_mVolt = mVolt;
+      mVolt = BatteryLevel();
+      if(old_mVolt == mVolt) { continue; };
+
+      for(int i=14;i>=0;i--)
+      {
+         Volts[i+1] = Volts[i];
+      }
+      Volts[0] = FormatNum("%d", mVolt/1000) + FormatNum(".%03dV", mVolt%1000);
+
+      ClearScreen();
+      TextOut(2, LCD_LINE8, "N:");
+      for(int i=0;i<8;i++)
+      {
+         TextOut(13, i*8, Volts[i]);
+      };/*
+      for(int i=8;i<16;i++)
+      {
+         TextOut(45, i*8, Volts[i]);
+      };*/
+      /*TextOut(0, LCD_LINE8, Volts[0]);
+      TextOut(0, LCD_LINE7, Volts[1]);
+      TextOut(0, LCD_LINE6, Volts[2]);
+      TextOut(0, LCD_LINE5, Volts[3]);
+      TextOut(0, LCD_LINE4, Volts[4]);
+      TextOut(0, LCD_LINE3, Volts[5]);
+      TextOut(0, LCD_LINE2, Volts[6]);
+      TextOut(0, LCD_LINE1, Volts[7]);*/
+      TextOut(58, LCD_LINE8, Volts[8]);
+      TextOut(58, LCD_LINE7, Volts[9]);
+      TextOut(58, LCD_LINE6, Volts[10]);
+      TextOut(58, LCD_LINE5, Volts[11]);
+      TextOut(58, LCD_LINE4, Volts[12]);
+      TextOut(58, LCD_LINE3, Volts[13]);
+      TextOut(58, LCD_LINE2, Volts[14]);
+      TextOut(58, LCD_LINE1, Volts[15]);
+      Wait(50);
+   }
+}

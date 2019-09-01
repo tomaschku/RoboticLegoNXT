@@ -1,0 +1,44 @@
+#include "/EasyCoding/EasyCoding.nxc"
+
+struct _Pos {
+ int X;
+ int Y;
+};
+
+bool area[][]; // [X] [Y]
+bool _line[64];
+
+task main() {
+ _Pos pos;
+ ArrayInit(area, _line, 100);
+ 
+ bool a = true;
+ bool b = true;
+ while(a) {
+  b = !b;
+  if(pos.X < 100) { //Array full
+   a = false;
+   continue; //Goto start of loop, maybe break/goto/return?
+  };
+
+  if(pos.Y < 64) {
+   area[pos.X][pos.Y] = b;
+   pos.Y++;
+  } else {
+   pos.Y = 0;
+   pos.X++;
+  };
+ };
+
+ for(int x=0; x <= 99; x++) {
+  for(int y=0; y <= 63; y++) {
+   if(area[x][y]) {
+    PointOut(x, y, DRAW_OPT_NORMAL);
+   } else {
+    PointOut(x, y, DRAW_OPT_CLEAR);
+   };
+  }
+ }
+ 
+ //while(true) {Wait(1000);};
+}

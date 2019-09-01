@@ -1,0 +1,83 @@
+#define sorter OUT_A
+#define blocker OUT_C
+#define platform OUT_B
+#define color_ball IN_1
+#define color_sorter IN_
+
+#define COLOR_BLACK 1
+#define COLOR_BLUE 2
+#define COLOR_GREEN 3
+#define COLOR_YELLOW 4
+#define COLOR_RED 5
+#define COLOR_WHITE 6
+
+void block(bool block) {
+ int Old_Rotation = MotorRotationCount(blocker);
+ if(block) {
+  OnRev(blocker, 50);
+ } else {
+  OnFwd(blocker, 50);
+ };
+ 
+ while(sign(MotorRotationCount(blocker) - Old_Rotation) < 100) { Wait(10); };
+ Off(blocker);
+};
+
+void kippen(bool normal) {
+ int Old_Rotation = MotorRotationCount(platform);
+ if(normal) {
+  OnFwd(platform, 50);
+ } else {
+  OnRev(platform, 50);
+ };
+ 
+ while(sign(MotorRotationCount(platform) - Old_Rotation) < 50) { Wait(10); };
+ Off(platform);
+};
+
+task main() {
+ SetSensorColorFull(color_ball);
+ //SetSensorColorFull(color_sorter);
+
+ ResetRotationCount(OUT_ABC);
+ PosRegEnable(sorter);
+
+ PosRegSetAngle(sorter, 0);
+ int sorter_degrees = 0;
+
+ while(true) {
+  switch(Sensor(color_ball)) {
+   case COLOR_BLACK:
+    PosRegSetAngle(sorter, 0);
+    sorter_degrees = 0;
+    break;
+   case COLOR_BLUE:
+    PosRegSetAngle(sorter, 90);
+    sorter_degrees = 90;
+    break;
+   case COLOR_RED:
+    PosRegSetAngle(sorter, 180);
+    sorter_degrees = 180;
+    break;
+   case COLOR_YELLOW:
+    PosRegSetAngle(sorter, 270);
+    sorter_degrees = 270;
+    break;
+   default case:
+    TextOut(0, LCD_LINE1, "Could'nt identif");
+    TextOut(0, LCD_LINE2, "the color ofBall");
+  };
+ };
+
+ while(!ButtonPressed(BTNCENTER, false)) {
+  Wait(10);
+ };
+};
+
+
+
+
+
+
+
+

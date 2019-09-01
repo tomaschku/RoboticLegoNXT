@@ -1,0 +1,16 @@
+//THIS DOES NOT APPLY TO AA BATTERIES
+Theoretical battery voltage from 7.2V till 9V
+Absolute min. voltage with motors: 6.9V
+Absolute max. voltage without motors: 8.6V
+
+
+File Extensions and their meaning:
+All - rxe, rtm, rpg, rso, ric, rmd
+Executeable - rxe, rtm
+Program Files - rpg
+Sound files - rso
+Icon files - ric
+Melody files - rmd
+Datalog files - rdt
+System files - sys
+Menu files - rms

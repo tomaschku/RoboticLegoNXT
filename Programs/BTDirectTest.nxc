@@ -1,0 +1,120 @@
+#include "/EasyCoding/EasyCoding.nxc"
+//http://bricxcc.sourceforge.net/nbc/nxcdoc/nxcapi/group___comm_module_functions.html
+//http://bricxcc.sourceforge.net/nbc/nxcdoc/nxcapi/examples.html
+
+/*task main() {
+  //???? Does nothing  RemoteStartProgram(CONN_BT1, "testBattery.rxe"); // OBSERVATION: if a pg is already running on the slave, it is not stopped.
+
+  // Stop it
+  //RemoteStopProgram(CONN_BT1);//  ERROR (Unknowmn/Invalidf statememnt)
+  // OBSERVATION: if a pg was already running on the slave, RemoteStopProgram()
+  // stops it and start "PlayClick.rxe" instead like if RemoteStartProgram() had
+  // queued it.
+  
+  // Play a tone
+  RemotePlayTone(CONN_BT1, 440, 1000);
+  // Stop
+  //RemoteStopSound(CONN_BT1);  Error
+  
+  // MOTORS
+  
+  // Activate motor un regulated
+  //???RemoteSetOutputState(CONN_BT1, OUT_A, 50, OUT_MODE_MOTORON, 0, 0, OUT_RUNSTATE_RUNNING, 0);
+  // Activate motor regulated
+  //???RemoteSetOutputState(CONN_BT1, OUT_A, 50, OUT_MODE_REGULATED, OUT_REGMODE_SPEED, 0, OUT_RUNSTATE_RUNNING, 180);
+  
+  // OBSERVATION: this call does not work: the motor on the slave stops.
+  // Maybe it is because I do not use turnpct, but I do not know what this arg
+  // is for.
+  
+  // Deactivate it
+  //???RemoteSetOutputState(CONN_BT1, OUT_A, 0, OUT_MODE_COAST, 0, 0, OUT_RUNSTATE_RUNNING, 0);
+  // Send keep alive notification
+//  RemoteKeepAlive(CONN_BT1); Error
+  // Start monitoring of inputs and outputs on slave
+  RemoteStartProgram(CONN_BT1, "DisplayInput.rxe");  //ab hier not testes
+  // Turn the motor (slave should display a value != 0)
+  RemoteSetOutputState(CONN_BT1, OUT_A, 70, OUT_MODE_MOTORON, 0, 0, OUT_RUNSTATE_RUNNING, 30);
+  // Reset its position (slave should display a value of 0)
+  RemoteResetMotorPosition(CONN_BT1, OUT_A, false);
+  
+  // INPUTS
+  
+  // Activate the light sensor
+  RemoteSetInputMode(CONN_BT1, S1, SENSOR_TYPE_LIGHT_ACTIVE, SENSOR_MODE_RAW);
+
+  // Pass in percentage
+  RemoteSetInputMode(CONN_BT1, S1, SENSOR_TYPE_LIGHT_ACTIVE, SENSOR_MODE_PERCENT);
+
+  while(!ButtonState(BTNCENTER));
+};
+
+
+
+
+
+
+
+/*
+Interesting Functions:
+
+-General
+ RemoteConnectionIdle (Used in many functions)
+ RemoteGetBatteryLevel
+ RemoteGetBluetoothAddress (Is the address not already known?)
+ GetBTDeviceAddress (Get Address -"-?)
+ RemoteGetCurrentProgramName
+ RemoteGetDeviceInfo (Free Mem, etc; Why not)
+ RemoteGetFirmwareVersion (MAYBE => Check if it can output TextOut Formats?)
+ RemoteGetInputValues (Read Status of ANY Sensor)
+ RemoteGetOutputState (Read Status of ANY Motor)
+ RemoteGetProperty (Basic Settings like soundlevel)
+ RemoteSetProperty (-"-)
+ RemoteKeepAlive
+ RemoteSetBrickName
+ RemoteSetInputMode (Set Port up for specific Sensor)
+ RemoteSetOutputState (Remote Motor Control)
+ BTDeviceName (Get Remote NXT Name)
+
+-File
+ RemoteRenameFile
+ RemoteCloseFile
+ RemoteDeleteFile
+ RemoteFindFirstFile
+ RemoteFindNextFile
+
+ RemoteOpenAppendData
+ RemoteOpenRead
+ RemoteOpenWrite
+ RemoteOpenWriteData
+ RemoteOpenWriteLinear
+
+ RemoteWrite
+ RemoteRead
+
+-IOMAP (Test first locally)
+ RemoteIOMapRead
+ RemoteIOMapWriteBytes
+ RemoteIOMapWriteValue
+
+-Programs / Sound
+ RemotePlaySoundFile
+ RemotePlayTone
+ RemoteStopSound
+ RemoteStartProgram
+ RemoteStopProgram
+ 
+-Ideas
+ TransferFile (Transfering Byte by Byte; Download custom Program first that handles that first)
+*/
+
+task main()
+{
+ int t;
+ for(int i=0; i < 5000; i++) {
+  RemotePlayTone(CONN_BT1, i, 50);
+  RemotePlayTone(CONN_BT2, i, 50);
+  RemotePlayTone(CONN_BT3, i, 50);
+  Wait(50);
+ }
+}

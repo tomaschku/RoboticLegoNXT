@@ -1,0 +1,236 @@
+#include "\EasyCoding\EasyCoding.nxc"
+
+//R = Right, L = Left, U = Up, D = Down
+
+#define dLCD_X DISPLAY_WIDTH //100          +1 = R
+#define dLCD_Y DISPLAY_HEIGHT //64          +1 = D
+#define dLCD_HX DISPLAY_WIDTH/2
+#define dLCD_HY DISPLAY_HEIGHT/2
+#define dStep 2
+
+//Prototypes
+void draw();
+void refresh();
+void bounds();
+void won(bool win);
+void AI();
+void debug();
+
+//===========VARIABLES===========
+bool play;
+int iPLAYERY;
+int iPCY;
+int iBALLX;
+int iBALLY;
+int iBALLDIR; //Expected: 1=LU \ 2=RU \ 3=RD \ 4=LD   || Real: 1=LD \ 2=RD \ 3=RU \ 4=LU
+bool PCup;
+int iGameSpeed;
+//==========END VARIABLES==========
+
+task main() {
+ //Initialize
+ play = true;
+ iGameSpeed = 75; //150
+ iPLAYERY = dLCD_HY;
+ iPCY = dLCD_HY;
+ iBALLY = dLCD_HY;
+ iBALLX = dLCD_HX;
+ PCup = true;
+ iBALLDIR = rnd(1, 4);
+
+ SetSensorTouch(IN_1);
+ SetSensorTouch(IN_2);
+ BTN_EXIT(true);
+ 
+ //Game Loop
+ while(play) {
+  draw();
+  refresh();
+  bounds();
+  AI();
+  debug();
+  Wait(iGameSpeed);
+ };
+}
+
+//===========FUNCTIONS===========
+void draw() {
+ ClearScreen();
+ RectOut(2, iPLAYERY, 3, 5, DRAW_OPT_NORMAL+DRAW_OPT_LOGICAL_XOR+DRAW_OPT_FILL_SHAPE);
+ RectOut(dLCD_X - 6, iPCY, 3, 5, DRAW_OPT_NORMAL+DRAW_OPT_LOGICAL_XOR+DRAW_OPT_FILL_SHAPE);
+ RectOut(iBALLX, iBALLY, 2, 2, DRAW_OPT_NORMAL+DRAW_OPT_LOGICAL_XOR+DRAW_OPT_FILL_SHAPE);
+}
+void refresh() {
+ /* ############################
+  * ########NOT PATCHED!########
+  * ############################
+  */
+ if(BTNPRESSED(BTNLEFT) == 1) {iPLAYERY = iPLAYERY + dStep;} else {
+  if(Sensor(IN_1) == 1) {iPLAYERY = iPLAYERY + dStep;};
+ };
+ if(BTNPRESSED(BTNRIGHT) == 1) {iPLAYERY = iPLAYERY - dStep;} else {
+  if(Sensor(IN_2) == 1) {iPLAYERY = iPLAYERY - dStep;};
+ };
+ if(PCup) {iPCY = iPCY - dStep;} else {iPCY = iPCY + dStep;};
+ switch(iBALLDIR) {
+  case 1://LU
+   iBALLX = iBALLX - 1;
+   iBALLY = iBALLY - 1;
+   break;
+  case 2://RU
+   iBALLX = iBALLX + 1;
+   iBALLY = iBALLY - 1;
+   break;
+  case 3://RD
+   iBALLX = iBALLX + 1;
+   iBALLY = iBALLY + 1;
+   break;
+  case 4://LD
+   iBALLX = iBALLX - 1;
+   iBALLY = iBALLY + 1;
+   break;
+ };
+}
+void bounds() {//Height: dLCD_Y - Height
+ int TMP_MAXY = dLCD_Y - 6;
+ //Player
+ if(iPLAYERY >= TMP_MAXY) {iPLAYERY = TMP_MAXY;};
+ if(iPLAYERY <= 0) {iPLAYERY = 0;};
+ 
+ //PC
+ if(iPCY >= TMP_MAXY) {iPCY = TMP_MAXY;};
+ if(iPCY <= 0) {iPCY = 0;};
+
+ //Ball
+ //Bounce from Up/Down
+ switch(iBALLDIR) {//From Left Top
+  case 1://LU
+   if(iBALLY <= 0) {
+    iBALLY = 0;
+    iBALLDIR = 4; //LD
+   };
+   break;
+  case 2://RU
+   if(iBALLY <= 0) {
+    iBALLY = 0;
+    iBALLDIR = 3; //RD
+   };
+   break;
+  case 3://RD
+   if(iBALLY >= dLCD_Y - 2) {
+    iBALLY = dLCD_Y - 2;
+    iBALLDIR = 2; //RU
+   };
+   if(between(iPCY, iPCY - 6, iBALLY) && iBALLX >= 20) {
+    iBALLDIR = 4;
+   };
+   break;
+  case 4://LD
+   if(iBALLY >= dLCD_Y - 2) {
+    iBALLY = dLCD_Y - 2;
+    iBALLDIR = 1; //LU
+   };
+   if(between(iPLAYERY, iPLAYERY - 6, iBALLY) && iBALLX <= 6) {//   +R +D
+    iBALLDIR = 3;
+   };
+   break;
+   // PLAYER: 4B*6H | 2 to the RIGHT
+   // PC: 4B*6H | 6 to the LEFT (4 Width, from the left: 4 + 2 Units distance = 6)
+   // BALL: 3S
+ };
+ 
+ //Ball + Player intercollision
+ if(iBALLX < 7) {
+  if(iBALLY > iPLAYERY && iBALLY < (iPLAYERY + 6)) { //+1 drawheight
+   if(iBALLDIR == 1) { iBALLDIR = 2; };
+   if(iBALLDIR == 4) { iBALLDIR = 3; };
+  };
+ };
+ if(iBALLX > 90) {
+  if(iBALLY > iPCY && iBALLY < (iPCY + 6)) { //+1 drawheight
+   if(iBALLDIR == 2) { iBALLDIR = 1; };
+   if(iBALLDIR == 3) { iBALLDIR = 4; };
+  };
+ };
+ 
+ //iBALLDIR; //Expected: 1=LU \ 2=RU \ 3=RD \ 4=LD   || Real: 1=LD \ 2=RD \ 3=RU \ 4=LU
+ //iPLAYERY = dLCD_HY;
+ //iPCY = dLCD_HY;
+ //iBALLY = dLCD_HY;
+ //iBALLX = dLCD_HX;
+ 
+ //Win/Lose for Player
+ if(iBALLX >= dLCD_X) {won(true);};
+ if(iBALLX <= 0) {won(false);};
+}
+void won(bool win) {
+ play = false;
+ ClearScreen();
+ if(win) {//Player
+  TextOut(40, LCD_LINE4, "WON!");
+ } else {//PC
+  TextOut(35, LCD_LINE4, "Lose...");
+ };
+ BTN_EXIT(false);
+ Wait(10000);
+}
+void AI() {
+ int TMP_Y_DISTANCE = iBALLY - iPCY;
+
+ if(TMP_Y_DISTANCE > 1) { PCup = false; };
+ if(TMP_Y_DISTANCE < 1) { PCup = true; };
+ 
+ //TMP Player
+ TMP_Y_DISTANCE = iBALLY - iPLAYERY;
+
+ if(TMP_Y_DISTANCE > 1) {iPLAYERY = iPLAYERY + dStep;} else {iPLAYERY = iPLAYERY - dStep;};
+}
+void debug() {
+ if(getBTN_EXIT()) {
+  if(BTNPRESSED(BTNEXIT) == 1) {
+   Stop(true);
+  };
+ };
+ if(BTNPRESSED(BTNCENTER)) {
+  while(BTNPRESSED(BTNCENTER)) { Wait(50); };
+  int debug = 1;
+  ClearScreen();
+  while(debug == 1) {
+   ClearScreen();
+   CenterTextOut(LCD_LINE2, "DEBUG MODE");
+   CenterTextOut(LCD_LINE4, "Ball Direction");
+   CenterTextOut(LCD_LINE5, NumToStr(iBALLDIR));
+   if(BTNPRESSED(BTNCENTER)) {
+    debug = 2;
+   };
+   if(BTNPRESSED(BTNLEFT) || Sensor(IN_1) == 1) {
+    iBALLDIR -= 1;
+   };
+   if(BTNPRESSED(BTNRIGHT) || Sensor(IN_2) == 1) {
+    iBALLDIR += 1;
+   };
+   if(iBALLDIR > 4) {iBALLDIR = 1;};
+   if(iBALLDIR < 1) {iBALLDIR = 4;};
+   Wait(250);
+  };
+  while(debug == 2) {
+   ClearScreen();
+   CenterTextOut(LCD_LINE2, "DEBUG MODE");
+   CenterTextOut(LCD_LINE4, "Game Loop Delay");
+   CenterTextOut(LCD_LINE5, NumToStr(iGameSpeed) + "MS");
+   if(BTNPRESSED(BTNCENTER)) {
+    debug = 3;
+   };
+   if(BTNPRESSED(BTNLEFT) || Sensor(IN_1) == 1) {
+    iGameSpeed -= 10;
+   };
+   if(BTNPRESSED(BTNRIGHT) || Sensor(IN_2) == 1) {
+    iGameSpeed += 10;
+   };
+   if(iGameSpeed > 1000) { iGameSpeed = 1000; };
+   if(iGameSpeed < 10) { iGameSpeed = 1; };
+   Wait(250);
+  };
+ };
+}
+//===========END FUNCTIONS========E

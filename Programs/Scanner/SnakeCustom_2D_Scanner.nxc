@@ -1,0 +1,230 @@
+//RotateMotor(MOTX, -50, 85); //1 cm
+#include "../EasyCoding/EasyCoding.nxc"
+#define MOTX OUT_A
+#define MOTY OUT_B
+#define LS S1 //Light Sensor
+#define TSX S2 //Touch Sensor X
+#define TSY S3 //Touch Sensor Y
+
+#define SCAN_X 33 //How many times to scan on the X-Axe
+#define LineWidth 3 //How wide the pixel should be (Search for algorythm to auto-calculate)
+
+void Status(string str);
+
+void Reset();
+void Scan();
+void Show();
+
+struct _Pos {
+ int X;
+ int Y;
+};
+
+_Pos pos;
+byte area[][]; // [X] [Y]
+byte _line[64];
+byte margin = 70;
+
+task main() {
+ //Setup
+ ClearScreen();
+ SetSensorLight(LS);
+ SetSensorTouch(TSX);
+ SetSensorTouch(TSY);
+ 
+ for(int i=0; i < 64; i++) {
+  _line[i] = 255;
+ };
+ 
+ //Fill area with 100x "64 Arrays"
+ ArrayInit(area, _line, 100); //Direct save to 2D
+
+ //Execution Flow
+ Reset();
+ Scan();
+ Show();
+
+ while(true) { Wait(1000); };
+};
+
+//==============================================================================
+void Reset() {
+ Status("Reset - Y");
+
+ OnFwd(MOTY, 100);
+ while(!Sensor(TSY)) {Wait(10);};
+ OnRev(MOTY, 100);
+ Wait(1700);
+ Off(MOTY);
+
+ Status("Reset - X");
+ if(Sensor(TSX)) {
+  fin:
+   OnFwd(MOTX, 100);
+   Wait(2000);
+   Off(MOTX);
+ } else {
+  OnRev(MOTX, 100);
+  while(Sensor(TSX) != true) { Wait(10); };
+  goto fin;
+ };
+};
+//==============================================================================
+void Scan() {//Scan-Routine
+ Status("Scanning");
+
+ //This only makes sense with the building
+ //Y Axe = NXT Face Direction
+ //X Axe = NXT Sideways
+ //Right/Left = Y
+ //Forward/Backward = X
+ 
+ bool forward = true, scanning = true;
+
+ while(scanning) {
+  if(Sensor(TSX) == 1) { scanning = false; continue; };
+  
+  if(forward) {
+   pos.Y = 0;
+   OnFwd(MOTY, 65); //50    75=X+3
+   while(pos.Y < 64 && Sensor(TSX) == 0/*Else X-Break doesn't work*/ && Sensor(TSY) == 0) {//While not touching
+    area[pos.X][pos.Y] = Sensor(LS);
+    if(area[pos.X][pos.Y] < margin) {
+     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_NORMAL);
+    } else {
+     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If Buffer for testing is inverted
+    };
+
+    pos.Y = pos.Y + 1;
+    Wait(35); //60      35=X*3
+   };
+  };
+  
+  if(!forward) {
+   pos.Y = 63;
+   OnRev(MOTY, 65);
+   while(pos.Y >= 0 && Sensor(TSX) == 0 && Sensor(TSY) == 0) {//While not touching
+    area[pos.X][pos.Y] = Sensor(LS);
+    if(area[pos.X][pos.Y] < margin) {
+     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_NORMAL);
+    } else {
+     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If Buffer for testing is inverted
+    };
+    
+    pos.Y = pos.Y - 1;
+    Wait(35);
+   };
+  };
+
+  Off(MOTY);
+  
+  //Move X Axe
+  RotateMotor(MOTX, -50, 62);
+  pos.X = pos.X + 1;
+  forward = !forward;
+ };
+ pos.X = 0;
+};
+//==============================================================================
+#define FNAME "SCAN_DATA.bin"
+
+void Show() {
+ ClearScreen();
+ 
+ //Select Option
+ CenterTextOut(LCD_LINE5, "Display <> File");
+ while(!BTNPRESSED(BTNLEFT) && !BTNPRESSED(BTNRIGHT)) { Wait(20); };
+ ClearScreen();
+ 
+ if(BTNPRESSED(BTNRIGHT)) {  //Else continue to Display it locally
+  //Save to File
+  byte Handle = 0;
+  unsigned int Return_Code = CreateFile(FNAME, 6400, Handle); //How many Bytes?   (Width X)100 * 64(Height Y) === 6400 Bytes
+  if(Return_Code == LDR_SUCCESS) {
+   unsigned int TMP_FSIZE = 0;
+   if(Handle == 0) { OpenFileRead(FNAME, TMP_FSIZE, Handle); };
+  } else {
+   if(Handle) { CloseFile(Handle); };
+   DeleteFile(FNAME);
+   CenterTextOut(LCD_LINE5, "Error R_C");
+   Wait(100000);
+  }
+
+  //File opened
+  
+  Return_Code = 0;
+  CenterTextOut(LCD_LINE4, "Copying...");
+  byte tmp_val = 0; //Used as placeholder for area[x][y] because of the crappy Compiler
+  
+  for(int x = 0; x < 100; x++) {
+  
+   for(int y = 0; y < 64; y++) {
+    tmp_val = area[x][y];
+    Return_Code = Write(Handle, tmp_val); //Write Byte
+   };
+
+   //tmp_val = area[x][63];
+   //Return_Code = WriteLn(Handle, tmp_val); //Write Byte
+   
+   /*if(Return_Code != LDR_SUCCESS) {
+    CenterTextOut(LCD_LINE5, "ERR: " + NumToStr(Return_Code));
+    break;
+   };*/
+  };
+
+  if(Handle) { CloseFile(Handle); };
+  ClearScreen();
+  CenterTextOut(LCD_LINE4, "Finished!");
+  return;
+ };
+ 
+ //END SAVE_FILE
+ 
+ bool left = false;
+ bool right = false;
+ while(true) {
+  left = BTNPRESSED(BTNLEFT);
+  right = BTNPRESSED(BTNRIGHT);
+
+  if(left) {
+   margin = margin - 1; // -= ??
+  };
+  if(right) {
+   margin = margin + 1;
+  };
+  if(left || right) {
+   ClearScreen();
+   CenterTextOut(LCD_LINE3, "Margin: " + NumToStr(margin));
+   CenterTextOut(LCD_LINE5, "Press Center");
+   CenterTextOut(LCD_LINE6, "to continue...");
+  };
+  
+  if(BTNPRESSED(BTNCENTER)) {
+   Status("Margin: " + NumToStr(margin));
+   for(int x = 0; x < SCAN_X; x++) {
+    for(int y = 0; y < 64; y++) {
+     if(area[x][y] < margin) {
+      LineOut(x * LineWidth, y, (x * LineWidth) + (LineWidth-1), y, DRAW_OPT_NORMAL);
+     } else {
+      LineOut(x * LineWidth, y, (x * LineWidth) + (LineWidth-1), y, DRAW_OPT_CLEAR);
+     };
+    };
+   };
+  };
+  
+  Wait(20);
+ };
+};
+
+
+
+
+
+
+
+
+//==============================================================================
+void Status(string str) {
+ ClearScreen();
+ CenterTextOut(LCD_LINE8, str);
+};

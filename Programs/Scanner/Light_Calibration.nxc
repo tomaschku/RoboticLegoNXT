@@ -1,0 +1,20 @@
+#define LS S1 //Light Sensor
+
+bool saveLight(byte input) {
+ if(input < 40){
+  //Black
+  return true;
+ } else {
+  //White
+  return false;
+ };
+};
+
+task main() {
+ SetSensorLight(LS);
+ while(true){
+  ClearScreen();
+  TextOut(30, LCD_LINE4, NumToStr(Sensor(LS)));
+  Wait(50);
+ }
+}
