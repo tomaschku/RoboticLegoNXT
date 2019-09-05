@@ -19,11 +19,11 @@ bool Rect_RResize(Rect "name", int "Nwidth", int "Nheight");\=
 bool Rect_AResize(Rect "name", int "X2", int "Y2");\=
 void Rect_Reset(Rect "name");\=
 void Rect_Printable(Rect "out", Rect "in");\=
-void Rect_Print(Rect "name", bool "prepared");\=
+void Rect_Print(Rect "name", bool "prepared", unsigned long "options");\=
  --------------Misc--------------
 int rnd(unsigned int "min", unsigned int "max");\=
 bool between(int "min", int "max", int "num");\=
-long map(long "x", long "in_min", long "in_max", long "out_min", long "out_max");\=
+long map(long "num", long "in_min", long "in_max", long "out_min", long "out_max");\=
 long limit(int "min", int "max", int "num");\=
 int min(int "a", int "b");\=
 int max(int "a", int "b");\=
@@ -39,7 +39,6 @@ bool CenterTextOut(int "y", string "name");\=
 string CenterText(string "name");\=
 bool RightTextOut(int "y", string "name");\=
 string RightText(string "name");\=
-bool ScreenOut(string "name"[]);\=
 int GetNumber(string "msg", int "min", int "max", int "switching_time");\=
 unsigned long getProgramRuntime();\=
 - Constants

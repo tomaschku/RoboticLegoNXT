@@ -11,15 +11,6 @@
 #define LD 0
 #define RD 0
 
-/*******************************************************
- *     NOTE: When editing Values, always call the      *
- * Correcture-Functions, so that all Values are legal. *
- *Also, the in C++ standardized :: operator is (because*
- *  of the limitations of NXC) replaced with _. This   *
- * operator is also used for all other structs in this *
- *                        file.                        *
- *******************************************************/
- 
 int ERR = 0;
 
 /*******************************************************
@@ -63,11 +54,8 @@ void Rect_AInit(Rect &in, int X, int Y, int X2, int Y2)
 bool Rect_RMove(Rect &in, int XMOV, int YMOV)
 {
  //Relative Move
- if(XMOV > 100 || XMOV < -100 || YMOV > 64 || YMOV < -64) { ERR = 100; return false; };
  int Nextx = in.X + XMOV;
- if(Nextx > 100 || Nextx < -100) { ERR = 101; return false; };
  int Nexty = in.Y + YMOV;
- if(Nexty > 60 || Nexty < -60) { ERR = 102; return false; };
 
  in.X = Nextx;
  Rect_X2(in);
@@ -80,20 +68,16 @@ bool Rect_RMove(Rect &in, int XMOV, int YMOV)
 bool Rect_AMove(Rect &in, int X, int Y)
 {
  //Absolute Move
- if(X < 0 || Y < 0 || X > DISPLAY_WIDTH || Y > DISPLAY_HEIGHT) { ERR = 110; return false; };
  in.X = X;
  Rect_X2(in);
- if(in.X2 > DISPLAY_WIDTH) { in.X2 = DISPLAY_WIDTH; };
  in.Y = Y;
  Rect_Y2(in);
- if(in.Y2 > DISPLAY_HEIGHT) { in.Y2 = DISPLAY_HEIGHT; };
  return true;
 };
 //=======================================================================================================
 bool Rect_RResize(Rect &in, int Nwidth, int Nheight)
 {
  //Relative Resize
- if(Nwidth > DISPLAY_WIDTH - (in.X + in.width) || Nheight > DISPLAY_HEIGHT - (in.Y + in.height)) { ERR = 120; return false; };
  in.width = Nwidth;
  in.height = Nheight;
  Rect_X2(in);
@@ -104,7 +88,6 @@ bool Rect_RResize(Rect &in, int Nwidth, int Nheight)
 bool Rect_AResize(Rect &in, int X2, int Y2)
 {
  //Absolute Resize
- if(X2 < in.X || X2 > DISPLAY_WIDTH || Y2 < in.Y || Y2 > DISPLAY_HEIGHT) { ERR = 130; return false; };
  in.X2 = X2;
  in.Y2 = Y2;
  Rect_width(in);
@@ -128,7 +111,7 @@ void Rect_Printable(Rect &out, Rect in)
  out.Y2 = 63 - in.Y2;
 };
 //=======================================================================================================
-void Rect_Print(Rect in, bool prepared)
+void Rect_Print(Rect in, bool prepared, unsigned long options = DRAW_OPT_NORMAL)
 {
  Rect ToPrint;
  if(!prepared) {
@@ -136,7 +119,7 @@ void Rect_Print(Rect in, bool prepared)
  } else {
   ToPrint = in;
  };
- RectOut(ToPrint.X, ToPrint.Y, ToPrint.width, ToPrint.height);
+ RectOut(ToPrint.X, ToPrint.Y, ToPrint.width, ToPrint.height, options);
 };
 //=======================================================================================================
 bool Rect_Overlap(Rect rA, Rect rB) {
@@ -152,36 +135,36 @@ bool Rect_Overlap(Rect rA, Rect rB) {
  *                        MISC                         *
  *******************************************************/
 
-long map(long x, long in_min, long in_max, long out_min, long out_max); //Prototype for rnd()
+long map(long num, long in_min, long in_max, long out_min, long out_max); //Prototype for rnd()
 
 long rnd(long min, long max)
 {
  return map(rand(), 0, RAND_MAX, min, max);
 };
 //=======================================================================================================
-bool between(int min, int max, int num)
+bool between(long min, long max, long num)
 {
- if(num < min && num > max) { return true; } else { return false; };
+ return (num < min && num > max);
 };
 //=======================================================================================================
-long map(long x, long in_min, long in_max, long out_min, long out_max)
+long map(long num, long in_min, long in_max, long out_min, long out_max)
 {
-  return (x - in_min) * (out_max - out_min + 1) / (in_max - in_min + 1) + out_min;
+  return (num - in_min) * (out_max - out_min + 1) / (in_max - in_min + 1) + out_min;
 };
 //=======================================================================================================
-long limit(int min, int max, int num)
+long limit(long min, long max, long num)
 {
  if(num < min) { return min; };
  if(num > max) { return max; };
  return num;
 };
 //=======================================================================================================
-int min(int a, int b)
+long min(long a, long b)
 {
  return a < b ? a : b;
 };
 //=======================================================================================================
-int max(int a, int b)
+long max(long a, long b)
 {
  return a > b ? a : b;
 };
@@ -209,6 +192,12 @@ bool BTNPRESSED(unsigned int btn, bool reset = false)
    break;
  }
 };
+//=======================================================================================================
+void pause(int btn = BTNCENTER, int check_delay = 10, bool Wait_Until_Stop = true)
+{
+ while(!BTNPRESSED(btn)) { Wait(check_delay); };
+ while(BTNPRESSED(btn) && Wait_Until_Stop) {};
+}
 //=======================================================================================================
 bool str_isEmpty(string str)
 {
@@ -256,13 +245,13 @@ string str_trim(string str)
 };
 //=======================================================================================================
 bool CenterTextOut(int y, string txt) {
- if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 5; return false; };
+ if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 1; return false; };
  TextOut((LCD_WIDTH-StrLen(txt)*CHAR_WIDTH)/2-5, y, txt);
  return true;
 };
 //=======================================================================================================
 string CenterText(string txt) {
- if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 5; return ""; };
+ if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 1; return ""; };
  string str = "";
  
  for(int i = 0; i <= (LCD_WIDTH-StrLen(txt)*CHAR_WIDTH)/2-5/CHAR_WIDTH; i++) {
@@ -273,13 +262,13 @@ string CenterText(string txt) {
 };
 //=======================================================================================================
 bool RightTextOut(int y, string txt) {
- if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 5; return false; };
+ if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 1; return false; };
  TextOut(LCD_WIDTH-(StrLen(txt)*CHAR_WIDTH+5), y, txt);
  return true;
 };
 //=======================================================================================================
 string RightText(string txt) {
- if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 5; return ""; };
+ if(StrLen(txt) > CHARS_PER_ROW || StrLen(txt) == 0) { ERR = 1; return ""; };
  string str = "";
  
  for(int i = 0; i <= (LCD_WIDTH-(StrLen(txt)*5+5/CHAR_WIDTH)); i++) {
@@ -289,7 +278,7 @@ string RightText(string txt) {
  return str + txt;
 };
 //=======================================================================================================
-int GetNumber(string msg, int min, int max, int switching_time = 100) {//Inclusive
+long GetNumber(string msg, long min, long max, int switching_time = 100) {//Inclusive
  int value = (max+min)/2; //Average them at the start
 
  while(!BTNPRESSED(BTNCENTER)) {
@@ -307,8 +296,8 @@ int GetNumber(string msg, int min, int max, int switching_time = 100) {//Inclusi
   };
   
   //Endless loop
-  if (min > value) value = max;
-  if (value > max) value = min;
+  if (min > value) { value = max; };
+  if (value > max) { value = min; };
  };
   
  while(BTNPRESSED(BTNCENTER)) { Wait(10); }; //No accidental press after function
