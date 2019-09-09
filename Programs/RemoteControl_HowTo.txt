@@ -1,0 +1,7 @@
+How to use RemoteControl.nxc:
+1. Connect to an NXT before starting the program
+2. Enter the assigned Bluetooth Slot in the program
+3. Use Buttons to navigate, left being up and right being down
+  - Press LONG to get to the next menu
+  - A Short Press allows you to scroll
+  - You can use the Gray Button to go back to another menu (2 secs for exit)

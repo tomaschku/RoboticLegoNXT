@@ -1,0 +1,76 @@
+#include "\EasyCoding\EasyCoding.nxc"
+
+int BT_PORT = 0;
+
+task keepAlive()
+{
+  //So the other NXT doesn't close the connection
+  while(true)
+  {
+    RemoteKeepAlive(BT_PORT);
+    Wait(30*1000);
+  };
+};
+
+task main()
+{
+  ClearScreen();
+  
+  BT_PORT = GetNumber("Select Slot:", 1, 4) - 1;
+  start keepAlive;
+  
+  ClearScreen();
+  
+  BTN_EXIT_FLAG(true);
+  int Mode_idx = 0;
+  int old_Mode_idx = 0;
+  int Selection_idx = 0;
+  
+  const int Info_Max = 2;
+  
+  while(true)
+  {
+    ClearScreen();
+    
+    //Reset Selection Var when switching menus
+    if(Mode_idx != old_Mode_idx) { old_Mode_idx = Mode_idx; Selection_idx = 0; };
+    
+    switch(Mode_idx)
+    {
+      case 0: //Info
+        while(!BTNPRESSED(BTNEXIT))
+        {
+          if(BTNPRESSED(BTNLEFT)) { Selection_idx--; };
+          if(BTNPRESSED(BTNRIGHT)) { Selection_idx++; };
+
+          if(Selection_idx < 0) { Selection_idx = Info_Max; };
+          if(Selection_idx > Info_Max) { Selection_idx = 0; };
+          
+          if(Selection_idx == 1) { goto Info2; };
+          
+          Info1:
+          CenterTextOut(LCD_LINE1, BTConnectionName(BT_PORT));
+
+          int level;
+          RemoteGetBatteryLevel(BT_PORT, level);
+          CenterTextOut(LCD_LINE3, "Battery: " + NumToStr(level) + "mV");
+
+          string CurrentProgram;
+          RemoteGetCurrentProgramName(BT_PORT, CurrentProgram);
+          CenterTextOut(LCD_LINE4, "\"" + CurrentProgram + "\"");
+          continue;
+          
+          Info2:
+          //Replace all this with a CORRECT menu system?
+        };
+
+        break;
+      case 1:
+        break;
+      case 2:
+        break;
+      default:
+        break;
+    };
+  };
+};

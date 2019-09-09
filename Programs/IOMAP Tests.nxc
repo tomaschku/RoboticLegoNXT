@@ -1,0 +1,21 @@
+#include "\EasyCoding\EasyCoding.nxc"
+
+/*
+From "Documentation -> NXC Guide Detailed.pdf"
+
+  Command module IOMAP offsets, 776
+   IOCtrl module IOMAP offsets, 780
+   Loader module IOMAP offsets, 781
+    Sound module IOMAP offsets, 794
+   Button module IOMAP offsets, 808
+       Ui module IOMAP offsets, 817
+    Input module IOMAP offsets, 831
+   Output module IOMAP offsets, 854
+Low speed module IOMAP offsets, 862
+  Display module IOMAP offsets, 891
+     Comm module IOMAP offsets, 920
+*/
+
+task main() {
+
+}

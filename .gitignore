@@ -1,3 +1,6 @@
-# BrixCC Dateien die überflüssig sind
+﻿# BrixCC Files that can be ignored
 *.bak
 *.sym
+
+# Windows stuff
+*.ini

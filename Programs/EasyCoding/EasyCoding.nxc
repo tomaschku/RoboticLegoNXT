@@ -1,4 +1,4 @@
-//The Error "task main not found" is normal! DO NOT ADD MAIN HERE!
+//The Error "task main not found" is normal! DO NOT ADD TASK MAIN HERE!
 
 #define LCD_WIDTH DISPLAY_WIDTH //100
 #define LCD_HEIGHT DISPLAY_HEIGHT //64
@@ -105,21 +105,9 @@ void Rect_Reset(Rect &in)
  in.height = 0;
 };
 //=======================================================================================================
-void Rect_Printable(Rect &out, Rect in)
+void Rect_Print(Rect in, unsigned long options = DRAW_OPT_NORMAL)
 {
- out.Y = 63 - in.Y; //63 = Zero based
- out.Y2 = 63 - in.Y2;
-};
-//=======================================================================================================
-void Rect_Print(Rect in, bool prepared, unsigned long options = DRAW_OPT_NORMAL)
-{
- Rect ToPrint;
- if(!prepared) {
-  Rect_Printable(ToPrint, in);
- } else {
-  ToPrint = in;
- };
- RectOut(ToPrint.X, ToPrint.Y, ToPrint.width, ToPrint.height, options);
+ RectOut(in.X, in.Y, in.width, in.height, options);
 };
 //=======================================================================================================
 bool Rect_Overlap(Rect rA, Rect rB) {
@@ -204,6 +192,11 @@ bool str_isEmpty(string str)
  return StrLen(str) == 0;
 };
 //=======================================================================================================
+int str_find_first(string ToSearch, string str)
+{
+ return Pos(ToSearch, str);
+};
+//=======================================================================================================
 int str_find_first_not(string str, char sym)
 {
  if(str_isEmpty(str)) { return 0; };
@@ -276,6 +269,11 @@ string RightText(string txt) {
  };
  
  return str + txt;
+};
+//=======================================================================================================
+void InvertLine(int y)
+{
+ RectOut(0, y, 100, 8, |DRAW_OPT_INVERT);
 };
 //=======================================================================================================
 long GetNumber(string msg, long min, long max, int switching_time = 100) {//Inclusive

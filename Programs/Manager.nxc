@@ -1,0 +1,278 @@
+#include "\EasyCoding\EasyCoding.nxc"
+
+//Menu Items
+string Menu[] = {"Debug", "Button Stats", "BT Communication"};
+//Text for specific Menu Items
+string Menu_Specials[] = {"DANGER :)", "Touch on 1&2&3", "Other NXT/Phone"};
+
+//Prototypes (for task main)
+void Menu_Debug();
+void Menu_ButtonStats();
+void Menu_BTCommunication();
+
+task main()
+{
+  int idx_Menu = 0;
+  int idx_Menu_old = 0;
+  
+  while(!BTNPRESSED(BTNCENTER))
+  {
+   //Handle Selection-Process
+   idx_Menu_old = idx_Menu;
+   if(BTNPRESSED(BTNLEFT)) { idx_Menu--; };
+   if(BTNPRESSED(BTNRIGHT)) { idx_Menu++; };
+   if(idx_Menu > (ArrayLen(Menu)-1)) { idx_Menu = 0; };
+   if(idx_Menu < 0) { idx_Menu = ArrayLen(Menu)-1; };
+
+   //Dont redraw if not changed
+   if(idx_Menu == idx_Menu_old) { continue; };
+
+   //After verification, display it
+   CenterTextOut(LCD_LINE2, "Currently");
+   CenterTextOut(LCD_LINE3, "selected Menu:");
+   CenterTextOut(LCD_LINE5, Menu[idx_Menu]);
+   CenterTextOut(LCD_LINE7, Menu_Specials[idx_Menu]);
+  };
+
+  ClearScreen();
+  
+  switch(idx_Menu)
+  {
+    case 0:
+      Menu_Debug();
+      break;
+    case 1:
+      Menu_ButtonStats();
+      break;
+    case 2:
+      Menu_BTCommunication();
+      break;
+    default:
+      break;
+  };
+};
+
+void Menu_Debug()
+{
+  return;
+};
+
+void Menu_ButtonStats()
+{
+  CenterTextOut(LCD_LINE1, "Mode Navigation:");
+  CenterTextOut(LCD_LINE3, "Touch1 = Before");
+  CenterTextOut(LCD_LINE4, "Touch2 = Next");
+  CenterTextOut(LCD_LINE5, "Touch3 = Reset"); //Reset currently selected mode
+  CenterTextOut(LCD_LINE8, "Center to start");
+  pause();
+
+  BTN_EXIT_FLAG(true); //Enable gray button
+  SetSensorTouch(S1);
+  SetSensorTouch(S2);
+
+  string Mode[] = {"Is Pressed", "Press Count", "Long Press Count", "ShortRelease Cnt", "ReleaseCnt(All?)", "Long Release Cnt", "Button State"};
+  int idx_Mode = 0;
+  
+  while(true)
+  {
+    ClearScreen();
+    CenterTextOut(LCD_LINE1, Mode[idx_Mode]);
+    
+    if(Sensor(S1)) { idx_Mode--; };
+    if(Sensor(S2)) { idx_Mode++; };
+    if(idx_Mode < 0) { idx_Mode = ArrayLen(Mode)-1; };
+    if(idx_Mode > (ArrayLen(Mode)-1)) { idx_Mode = 0; };
+    
+    bool reset = Sensor(S3);
+    int Mode6_idx = 0;
+    
+    switch(idx_Mode)
+    {
+      case 0: //Is Pressed
+        string isOK = "X";
+        if(ButtonPressed(BTNLEFT, reset)) {isOK="X";} else {isOK="O";};
+        TextOut(37, LCD_LINE4, isOK);
+        if(ButtonPressed(BTNCENTER, reset)) {isOK="X";} else {isOK="O";};
+        TextOut(47, LCD_LINE4, isOK);
+        if(ButtonPressed(BTNRIGHT, reset)) {isOK="X";} else {isOK="O";};
+        TextOut(57, LCD_LINE4, isOK);
+        if(ButtonPressed(BTNEXIT, reset)) {isOK="X";} else {isOK="O";};
+        TextOut(47, LCD_LINE6, isOK);
+        break;
+      case 1: //(Press Count) Is this all button presses or just short-press-count?
+        if(reset) //No built-in reset
+        {
+          SetButtonPressCount(BTNLEFT, 0);
+          SetButtonPressCount(BTNCENTER, 0);
+          SetButtonPressCount(BTNRIGHT, 0);
+          SetButtonPressCount(BTNEXIT, 0);
+        };
+        
+        CenterTextOut(LCD_LINE4,
+          NumToStr(ButtonPressCount(BTNLEFT)) + "  " +
+          NumToStr(ButtonPressCount(BTNCENTER)) + "  " +
+          NumToStr(ButtonPressCount(BTNRIGHT)));
+        CenterTextOut(LCD_LINE6, NumToStr(ButtonPressCount(BTNEXIT)));
+        break;
+      case 2: //Long Press Count
+        if(reset) //No built-in reset
+        {
+          SetButtonLongPressCount(BTNLEFT, 0);
+          SetButtonLongPressCount(BTNCENTER, 0);
+          SetButtonLongPressCount(BTNRIGHT, 0);
+          SetButtonLongPressCount(BTNEXIT, 0);
+        };
+        
+        CenterTextOut(LCD_LINE4,
+          NumToStr(ButtonLongPressCount(BTNLEFT)) + "  " +
+          NumToStr(ButtonLongPressCount(BTNCENTER)) + "  " +
+          NumToStr(ButtonLongPressCount(BTNRIGHT)));
+        CenterTextOut(LCD_LINE6, NumToStr(ButtonLongPressCount(BTNEXIT)));
+        break;
+      case 3: //Short Release Count
+        if(reset) //No built-in reset
+        {
+          SetButtonShortReleaseCount(BTNLEFT, 0);
+          SetButtonShortReleaseCount(BTNCENTER, 0);
+          SetButtonShortReleaseCount(BTNRIGHT, 0);
+          SetButtonShortReleaseCount(BTNEXIT, 0);
+        };
+        
+        CenterTextOut(LCD_LINE4,
+          NumToStr(ButtonShortReleaseCount(BTNLEFT)) + "  " +
+          NumToStr(ButtonShortReleaseCount(BTNCENTER)) + "  " +
+          NumToStr(ButtonShortReleaseCount(BTNRIGHT)));
+        CenterTextOut(LCD_LINE6, NumToStr(ButtonShortReleaseCount(BTNEXIT)));
+        break;
+      case 4: //Release Count (Short+Long?)
+        if(reset) //No built-in reset
+        {
+          SetButtonReleaseCount(BTNLEFT, 0);
+          SetButtonReleaseCount(BTNCENTER, 0);
+          SetButtonReleaseCount(BTNRIGHT, 0);
+          SetButtonReleaseCount(BTNEXIT, 0);
+        };
+
+        CenterTextOut(LCD_LINE4,
+          NumToStr(ButtonReleaseCount(BTNLEFT)) + "  " +
+          NumToStr(ButtonReleaseCount(BTNCENTER)) + "  " +
+          NumToStr(ButtonReleaseCount(BTNRIGHT)));
+        CenterTextOut(LCD_LINE6, NumToStr(ButtonReleaseCount(BTNEXIT)));
+        break;
+      case 5: //Long Release Count
+        if(reset) //No built-in reset
+        {
+          SetButtonLongReleaseCount(BTNLEFT, 0);
+          SetButtonLongReleaseCount(BTNCENTER, 0);
+          SetButtonLongReleaseCount(BTNRIGHT, 0);
+          SetButtonLongReleaseCount(BTNEXIT, 0);
+        };
+
+        CenterTextOut(LCD_LINE4,
+          NumToStr(ButtonLongReleaseCount(BTNLEFT)) + "  " +
+          NumToStr(ButtonLongReleaseCount(BTNCENTER)) + "  " +
+          NumToStr(ButtonLongReleaseCount(BTNRIGHT)));
+        CenterTextOut(LCD_LINE6, NumToStr(ButtonLongReleaseCount(BTNEXIT)));
+        break;
+      case 6: //Button State
+        string Btn_Names[]= {"BTN EXIT", "BTN RIGHT", "BTN LEFT", "BTN CENTER"};
+        while(true)
+        {
+          ClearScreen();
+          CenterTextOut(LCD_LINE1, Mode[idx_Mode]);
+          //SetButtonState throws Error in compiler code
+          // "The last op. in a subr. must be an return" (Main Error?)
+          // "Unmatched compiler directive" (Error in NXCDef.h)
+          
+          if(Sensor(S1))
+          {
+            Mode6_idx--;
+            if(Mode6_idx < 0) {
+              Mode6_idx = 0; //Do not loop values
+              idx_Mode--; //5
+              while(Sensor(S1)) {}; //To Stop idx_Menu from decrementing twice
+              goto stop_loop;
+            };
+          };
+          
+          if(Sensor(S2))
+          {
+            Mode6_idx++;
+            if(Mode6_idx > 3) { // 3 = 4 Buttons, 0 based
+              Mode6_idx = 3; //Do not loop values
+              idx_Mode++; //7, if created
+              while(Sensor(S2)) {}; //To Stop idx_Menu from incrementing twice
+              goto stop_loop;
+            };
+          };
+          
+          CenterTextOut(LCD_LINE2, Btn_Names[Mode6_idx]);
+          byte state = ButtonState(Mode6_idx);
+          TextOut(0, LCD_LINE3, "       PRESSED " + NumToStr(state & 0x01));
+          TextOut(0, LCD_LINE4, "  LONG PRESSED " + NumToStr(state & 0x04));
+          TextOut(0, LCD_LINE5, "SHORT RELEASED " + NumToStr(state & 0x02));
+          TextOut(0, LCD_LINE6, " LONG RELEASED " + NumToStr(state & 0x08));
+          TextOut(0, LCD_LINE7, " PRESSED_STATE " + NumToStr(state & 0x80));
+          TextOut(0, LCD_LINE8, "          NONE " + NumToStr(state & 0x10));
+          break;
+        };
+        stop_loop: //Dirty way of exiting loop, should work though
+    };
+  };
+  
+  BTN_EXIT_FLAG(false);
+  return;
+};
+
+void Menu_BTCommunication()
+{
+  CenterTextOut(LCD_LINE1, "Turning BT on...");
+  
+  CommBTOnOffType BT_ONOFF;
+  BT_ONOFF.PowerState = true;
+  SysCommBTOnOff(BT_ONOFF);
+  if(BT_ONOFF.Result != NO_ERR) {
+    //UNRECOVERABLE ERROR
+    CenterTextOut(LCD_LINE3, "BT_ONOFF ERROR");
+    NumOut(35, LCD_LINE4, BT_ONOFF.Result);
+    CenterTextOut(LCD_LINE5, "Command module >");
+    CenterTextOut(LCD_LINE6, "Errors list");
+    CenterTextOut(LCD_LINE7, "Pls report to me");
+    pause();
+    abort();
+  };
+  
+  TextOut(0, LCD_LINE1, "                "); //Clear Line
+  CenterTextOut(LCD_LINE1, "Bluetooth on!");
+  Wait(1500);
+  ClearScreen();
+  
+  //LCD_LINE1 Mode?
+  
+  CenterTextOut(LCD_LINE2, BrickDataName());
+  CenterTextOut(LCD_LINE3, "Timeout: " + NumToStr(BrickDataTimeoutValue()));
+
+  CenterTextOut(LCD_LINE4, "BtConnectionInfo");
+  for(int i=0; i <= 3; i++)
+  {
+    //Clear Lines
+    TextOut(0, LCD_LINE6, "                ");
+    TextOut(0, LCD_LINE7, "                ");
+    
+    byte BT_Status = BluetoothStatus(i);
+    string BT_Visible = "No";
+    if(BT_Status & 0x01) { BT_Visible = "Yes"; };
+    string BT_Port_Open = " No";
+    if(BT_Status & 0x02) { BT_Visible = "Yes"; };
+    
+    CenterTextOut(LCD_LINE5, "BT Device Port " + NumToStr(i));
+    CenterTextOut(LCD_LINE6, "BT Visible: " + BT_Visible);
+    CenterTextOut(LCD_LINE7, "BT Port Open:" + BT_Port_Open);
+    Wait(5*1000);
+  };
+  
+  //Turn BT off (can't check yet if it was active beforehand)
+  BT_ONOFF.PowerState = false;
+  SysCommBTOnOff(BT_ONOFF);
+  return;
+};
