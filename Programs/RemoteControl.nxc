@@ -8,7 +8,7 @@ task keepAlive()
   while(true)
   {
     RemoteKeepAlive(BT_PORT);
-    Wait(30*1000);
+    Wait(30*1000); //Every 30 Seconds should be enough
   };
 };
 
@@ -61,7 +61,6 @@ task main()
           continue;
           
           Info2:
-          //Replace all this with a CORRECT menu system?
         };
 
         break;

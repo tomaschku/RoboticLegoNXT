@@ -1,0 +1,214 @@
+//The Error "task main not found" is normal! DO NOT ADD TASK MAIN HERE!
+
+  //(0|0) point is the Top-Left corner
+struct Rect {
+  int X;
+  int Y;
+  int X2;
+  int Y2;
+  int width;
+  int height;
+  bool modify;
+};
+
+  //Default for "Pass by Reference" Parameters (So Init and other functions can be used more easily)
+const Rect _rect_default_param_ = { 0, 0, 0, 0, 0, 0, false };
+
+  //Correcture-Functions
+void Rect_X(Rect &in) { in.X = in.X2 - in.width; };
+void Rect_Y(Rect &in) { in.Y = in.Y2 - in.height; };
+void Rect_X2(Rect &in) { in.X2 = in.X + in.width; };
+void Rect_Y2(Rect &in) { in.Y2 = in.Y + in.height; };
+void Rect_width(Rect &in) { in.width = in.X2 - in.X; };
+void Rect_height(Rect &in) { in.height = in.Y2 - in.Y; };
+
+  //Relative Init
+Rect Rect_RInit(int X, int Y, int width, int height, Rect &in = _rect_default_param_)
+{  
+  if(in.modify == false)
+  {
+    Rect out;
+    
+    out.X = X;
+    out.Y = Y;
+    out.width = width;
+    out.height = height;
+    out.modify = true;
+    
+    Rect_X2(out);
+    Rect_Y2(out);
+    return out;
+  };
+  
+  in.X = X;
+  in.Y = Y;
+  in.width = width;
+  in.height = height;
+  
+  Rect_X2(in);
+  Rect_Y2(in);
+  return in;
+};
+
+  //Absolute Init
+Rect Rect_AInit(int X, int Y, int X2, int Y2, Rect &in = _rect_default_param_)
+{
+  if(in.modify == false)
+  {
+    Rect out;
+    
+    out.X = X;
+    out.Y = Y;
+    out.X2 = X2;
+    out.Y2 = Y2;
+    out.modify = true;
+    
+    Rect_width(out);
+    Rect_height(out);
+    return out;
+  };
+  
+  in.X = X;
+  in.Y = Y;
+  in.X2 = X2;
+  in.Y2 = Y2;
+  
+  Rect_width(in);
+  Rect_height(in);
+  return in;
+};
+
+  //Relative Move
+Rect Rect_RMove(Rect &in, int XMOV = 0, int YMOV = 0)
+{
+  int NextX = in.X + XMOV;
+  int NextY = in.Y + YMOV;
+  
+  if(in.modify == false)
+  {
+    Rect out;
+    
+    out.X = NextX;
+    out.Y = NextY;
+    out.width = in.width;
+    out.height = in.height;
+    out.modify = true;
+    
+    Rect_X2(out);
+    Rect_Y2(out);
+    return out;
+  };
+  
+  in.X = NextX;
+  in.Y = NextY;
+  
+  Rect_X2(in);
+  Rect_Y2(in);
+  return in;
+};
+
+  //Absolute Move
+Rect Rect_AMove(Rect &in, int X, int Y)
+{
+  if(in.modify == false)
+  {
+    Rect out;
+    
+    out.X = X;
+    out.Y = Y;
+    out.width = in.width;
+    out.height = in.height;
+    out.modify = true;
+    
+    Rect_X2(out);
+    Rect_Y2(out);
+    return out;
+  };
+  
+  in.X = X;
+  in.Y = Y;
+  
+  Rect_X2(in);
+  Rect_Y2(in);
+  return in;
+};
+
+  //Relative Resize
+Rect Rect_RResize(Rect &in, int width_res = 0, int height_res = 0)
+{
+  int NextWidth = in.width + width_res;
+  int NextHeight = in.height + height_res;
+  
+  if(in.modify == false)
+  {
+    Rect out;
+    
+    out.X = in.X;
+    out.Y = in.Y;
+    out.width = NextWidth;
+    out.height = NextHeight;
+    out.modify = true;
+    
+    Rect_X2(out);
+    Rect_Y2(out);
+    return out;
+  };
+  
+  in.width = NextWidth;
+  in.height = NextHeight;
+  
+  Rect_X2(in);
+  Rect_Y2(in);
+  return in;
+};
+
+  //Absolute Resize
+Rect Rect_AResize(Rect &in, int X2, int Y2)
+{
+  if(in.modify == false)
+  {
+    Rect out;
+    
+    out.X = in.X;
+    out.Y = in.Y;
+    out.X2 = X2;
+    out.Y2 = Y2;
+    out.modify = true;
+    
+    Rect_width(out);
+    Rect_height(out);
+    return out;
+  };
+  
+  in.X2 = X2;
+  in.Y2 = Y2;
+  
+  Rect_width(in);
+  Rect_height(in);
+  return in;
+};
+
+void Rect_Reset(Rect &in)
+{
+  if(in.modify == false) { return; };
+  
+  in.X = 0;
+  in.Y = 0;
+  in.X2 = 0;
+  in.Y2 = 0;
+  in.width = 0;
+  in.height = 0;
+};
+
+void Rect_Print(Rect in, unsigned long options = DRAW_OPT_NORMAL)
+{
+  RectOut(in.X, in.Y, in.width, in.height, options);
+};
+
+bool Rect_Overlap(Rect rA, Rect rB) {
+  if (rA.X <= rB.X2 && rA.X2 >= rB.X && rA.Y >= rB.Y2 && rA.Y2 <= rB.Y) {
+   return true;
+  } else {
+   return false;
+  };
+};

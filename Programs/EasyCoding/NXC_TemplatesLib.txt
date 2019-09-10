@@ -10,15 +10,16 @@ void Rect_Y2(Rect "name");\=
 void Rect_width(Rect "name");\=
 void Rect_height(Rect "name");\=
  -------Initiators/Setters-------
-void Rect_RInit(Rect "name", int "X", int "Y", int "width", int "height");\=
-void Rect_AInit(Rect "name", int "X", int "Y", int "X2", int "Y2");\=
+Rect Rect_RInit(int "X", int "Y", int "width", int "height", Rect "optional");\=
+Rect Rect_AInit(int "X", int "Y", int "X2", int "Y2", Rect "optional");\=
  --------Special Functions-------
-bool Rect_RMove(Rect "name", int "XMOV", int "YMOV");\=
-bool Rect_AMove(Rect "name", int "X", int "Y");\=
-bool Rect_RResize(Rect "name", int "Nwidth", int "Nheight");\=
-bool Rect_AResize(Rect "name", int "X2", int "Y2");\=
+Rect Rect_RMove(Rect "name", int "XMOV", int "YMOV");\=
+Rect Rect_AMove(Rect "name", int "X", int "Y");\=
+Rect Rect_RResize(Rect "name", int "width_res", int "height_res");\=
+Rect Rect_AResize(Rect "name", int "X2", int "Y2");\=
 void Rect_Reset(Rect "name");\=
 void Rect_Print(Rect "name", unsigned long "options");\=
+bool Rect_Overlap(Rect "A", Rect "B");\=
  --------------Misc--------------
 int rnd(unsigned int "min", unsigned int "max");\=
 bool between(int "min", int "max", int "num");\=
@@ -30,19 +31,21 @@ bool getBTN_EXIT_FLAG();\=
 void BTN_EXIT_FLAG(bool "wait_before_exit");\=
 bool BTNPRESSED(unsigned int "btn", bool "reset");\=
 void pause(int "btn", int "check_delay");\=
-bool str_isEmpty(string "name");\=
-int str_find_first_not(string "name", char "symbol");\=
-int str_find_last_not (string "name", char "symbol");\=
-string str_trim(string "name");\=
 bool CenterTextOut(int "y", string "name");\=
 string CenterText(string "name");\=
 bool RightTextOut(int "y", string "name");\=
 string RightText(string "name");\=
 int GetNumber(string "msg", int "min", int "max", int "switching_time");\=
 unsigned long getProgramRuntime();\=
+ -------------Strings------------
+bool str_isEmpty(string "name");\=
+int str_find_first(string "ToSearch", string "str");\=
+int str_find_first_not(string "name", char "symbol");\=
+int str_find_last_not (string "name", char "symbol");\=
+string str_trim(string "name");\=
 - Constants
-LCD_WIDTH //100
-LCD_HEIGHT //64
+DISPLAY_WIDTH //100
+DISPLAY_HEIGHT //64
 CHAR_HEIGHT //8
 CHAR_WIDTH //5
 CHARS_PER_ROW //16

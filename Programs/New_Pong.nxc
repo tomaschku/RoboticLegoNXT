@@ -40,7 +40,7 @@ task main() {
 
  SetSensorTouch(IN_1);
  SetSensorTouch(IN_2);
- BTN_EXIT(true);
+ BTN_EXIT_FLAG(true);
  
  //Game Loop
  while(play) {
@@ -171,7 +171,7 @@ void won(bool win) {
  } else {//PC
   TextOut(35, LCD_LINE4, "Lose...");
  };
- BTN_EXIT(false);
+ BTN_EXIT_FLAG(false);
  Wait(10000);
 }
 void AI() {
@@ -186,7 +186,7 @@ void AI() {
  if(TMP_Y_DISTANCE > 1) {iPLAYERY = iPLAYERY + dStep;} else {iPLAYERY = iPLAYERY - dStep;};
 }
 void debug() {
- if(getBTN_EXIT()) {
+ if(getBTN_EXIT_FLAG()) {
   if(BTNPRESSED(BTNEXIT) == 1) {
    Stop(true);
   };

@@ -63,8 +63,8 @@ task main() {
     PosRegSetAngle(sorter, 270);
     sorter_degrees = 270;
     break;
-   default case:
-    TextOut(0, LCD_LINE1, "Could'nt identif");
+   default:
+    TextOut(0, LCD_LINE1, "Couldnt identify");
     TextOut(0, LCD_LINE2, "the color ofBall");
   };
  };
@@ -73,11 +73,3 @@ task main() {
   Wait(10);
  };
 };
-
-
-
-
-
-
-
-

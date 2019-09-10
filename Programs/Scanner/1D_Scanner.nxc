@@ -1,4 +1,4 @@
-#include "/EasyCoding/EasyCoding.nxc"
+#include "../EasyCoding/EasyCoding.nxc"
 #define MOTX OUT_A
 #define MOTY OUT_B
 #define LS S1 //Light Sensor

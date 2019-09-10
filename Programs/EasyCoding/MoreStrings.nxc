@@ -1,0 +1,54 @@
+//The Error "task main not found" is normal! DO NOT ADD TASK MAIN HERE!
+//Here are functions not natively provided by NXC
+
+bool str_isEmpty(string str)
+{
+  return StrLen(str) == 0;
+};
+
+int str_find_first(string ToSearch, string str)
+{
+  return Pos(ToSearch, str);
+};
+
+int str_find_first_not(string str, char sym)
+{
+  if(str_isEmpty(str)) { return -1; };
+  int pos = 0;
+  char s_sym[];
+  s_sym[0] = sym;
+
+  for(int i = 0; i < StrLen(str); i++) {
+    if(SubStr(str, i, 1) == s_sym) { pos = i; } else { break; };
+  }
+
+  if(pos == 0 && SubStr(str, pos, 1) != s_sym) { return -1; }; //char not found
+
+  return pos;
+};
+
+int str_find_last_not(string str, char sym)
+{
+  if(str_isEmpty(str)) { return -1; };
+  int pos = 0;
+  char s_sym[];
+  s_sym[0] = sym;
+
+  for(int i = StrLen(str); i >= 0; i--) {
+    if(SubStr(str, i, 1) == s_sym) { pos = i; } else { break; };
+  }
+
+  return pos;
+};
+
+string str_trim(string str)
+{
+  if(str_isEmpty(str)) { return ""; };
+  string new = "";
+
+  int startpos = str_find_first_not(str, " ");
+  int endpos = str_find_last_not(str, " ");
+  new = SubStr(str, startpos, endpos-startpos+1 );
+
+  return new;
+};
