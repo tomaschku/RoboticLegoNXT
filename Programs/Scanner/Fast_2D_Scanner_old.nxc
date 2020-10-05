@@ -1,4 +1,6 @@
-//RotateMotor(MOTX, -50, 85); //1 cm
+//Third attempt to make the scanner work with 2 dimensions, but faster
+
+//Calibration Stuff: RotateMotor(MOTX, -50, 85); //1 cm
 
 #include "../EasyCoding/EasyCoding.nxc"
 #define MOTX OUT_A
@@ -9,7 +11,7 @@
 
 #define SCAN_X 33 //How many times to scan in X-Axe
 #define LineWidth 3 //How wide the pixel should be (Search for algorithm to auto-calculate)
-//Fast = Snake-like Movement
+//Fast = Snake-like Movement aka scanning while moving forwards and backwards
 void Status(string str);
 bool saveLight(byte input);
 
@@ -73,19 +75,19 @@ void Scan() {//Scan-Routine
  for(int x=0; x < SCAN_X; x++) {
   if(Sensor(TSX) == 1) { break; };
  
-  OnFwd(MOTY, 75); //50    75=X+3
-  while(Sensor(TSY) == 0 && pos.Y < 64 && Sensor(TSX) == 0/*Else X-Break doesn't work*/) {//While not touching
+  OnFwd(MOTY, 75);
+  while(Sensor(TSY) == 0 && pos.Y < 64 && Sensor(TSX) == 0/*Else X-Axe-Break doesn't work*/) {//While not touching
    area[pos.X][pos.Y] = saveLight(Sensor(LS));
    if(area[pos.X][pos.Y]==1) {
     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_NORMAL);
    } else {
-    LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If Buffer for testing is inverted
+    LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If buffer for testing is inverted
    };
    //DEBUG-PRINT
    //CenterTextOut(LCD_LINE4, "Pos.Y: " + NumToStr(pos.Y));
    //CenterTextOut(LCD_LINE5, "Pos.X: " + NumToStr(pos.X));
    pos.Y = pos.Y + 1;
-   Wait(35); //60      35=X*3
+   Wait(35);
   }
   pos.Y = 0;
   Off(MOTY);

@@ -1,3 +1,5 @@
+//Testing Array-related functions so they can be used for the scanner-programs.
+
 #include "/EasyCoding/EasyCoding.nxc"
 
 struct _Pos {
@@ -18,7 +20,7 @@ task main() {
   b = !b;
   if(pos.X < 100) { //Array full
    a = false;
-   continue; //Goto start of loop, maybe break/goto/return?
+   continue;
   };
 
   if(pos.Y < 64) {

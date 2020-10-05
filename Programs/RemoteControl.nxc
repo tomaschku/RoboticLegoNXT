@@ -1,3 +1,5 @@
+//Basic (and even still unfinished) remote control of another NXT
+
 #include "\EasyCoding\EasyCoding.nxc"
 
 int BT_PORT = 0;
@@ -8,7 +10,7 @@ task keepAlive()
   while(true)
   {
     RemoteKeepAlive(BT_PORT);
-    Wait(30*1000); //Every 30 Seconds should be enough
+    Wait(30000); //Every 30 Seconds should be enough
   };
 };
 

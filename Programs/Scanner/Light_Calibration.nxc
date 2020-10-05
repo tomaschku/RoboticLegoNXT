@@ -1,3 +1,5 @@
+//Calibrate the threshold at which to return true (black) or false (white)
+
 #define LS S1 //Light Sensor
 
 bool saveLight(byte input) {

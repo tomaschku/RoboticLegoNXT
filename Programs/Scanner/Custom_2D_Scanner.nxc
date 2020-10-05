@@ -1,4 +1,6 @@
-//RotateMotor(MOTX, -50, 85); //1 cm
+//Second attempt to make the scanner work with 2 dimensions
+
+//Calibration Stuff: RotateMotor(MOTX, -50, 85); //1 cm
 
 #include "../EasyCoding/EasyCoding.nxc"
 #define MOTX OUT_A
@@ -8,7 +10,7 @@
 #define TSY S3 //Touch Sensor Y
 
 #define SCAN_X 33 //How many times to scan on the X-Axe
-#define LineWidth 3 //How wide the pixel should be (Search for algorythm to auto-calculate)
+#define LineWidth 3 //How wide the pixel should be (Search for algorithm to auto-calculate)
 
 void Status(string str);
 
@@ -78,18 +80,18 @@ void Scan() {//Scan-Routine
   if(Sensor(TSX)) { break; };
  
   OnFwd(MOTY, 75); //50    75=X+3
-  while(Sensor(TSY) == 0 && pos.Y < 64 && Sensor(TSX) == 0/*Else X-Break doesn't work*/) {//While not touching
+  while(Sensor(TSY) == 0 && pos.Y < 64 && Sensor(TSX) == 0/*Else X-Axe-Break doesn't work*/) {//While not touching
    area[pos.X][pos.Y] = Sensor(LS);
    if(area[pos.X][pos.Y] < margin) {
     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_NORMAL);
    } else {
-    LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If Buffer for testing is inverted
+    LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If buffer for testing is inverted
    };
    //DEBUG-PRINT
    //CenterTextOut(LCD_LINE4, "Pos.Y: " + NumToStr(pos.Y));
    //CenterTextOut(LCD_LINE5, "Pos.X: " + NumToStr(pos.X));
    pos.Y = pos.Y + 1;
-   Wait(35); //60      35=X*3
+   Wait(35);
   }
   pos.Y = 0;
   Off(MOTY);
@@ -114,42 +116,42 @@ void Show() {
  ClearScreen();
  
  //Select Option
- CenterTextOut(LCD_LINE5, "Display <> File");
+ CenterTextOut(LCD_LINE5, "Display or File");
  while(!BTNPRESSED(BTNLEFT) && !BTNPRESSED(BTNRIGHT)) { Wait(20); };
  ClearScreen();
  
- if(BTNPRESSED(BTNRIGHT)) {  //Else continue to Display it locally
-  //Save to File
+ //Save to File
+ if(BTNPRESSED(BTNRIGHT)) {
   byte Handle = 0;
-  unsigned int Return_Code = CreateFile(FNAME, 6400, Handle); //How many Bytes?   (Width X)100 * 64(Height Y) === 6400 Bytes
+  unsigned int Return_Code = CreateFile(FNAME, 6400, Handle); //100(Width X) * 64(Height Y) = 6400 Bytes
   if(Return_Code == LDR_SUCCESS) {
    unsigned int TMP_FSIZE = 0;
    if(Handle == 0) { OpenFileRead(FNAME, TMP_FSIZE, Handle); };
   } else {
+   //Error: Ignore and display it locally
    if(Handle) { CloseFile(Handle); };
    DeleteFile(FNAME);
   }
-
-  //File opened
   
+  //File opened   
   Return_Code = 0;
   CenterTextOut(LCD_LINE4, "Copying...");
-  byte tmp_val = 0; //Used as placeholder for area[x][y] because of the crappy Compiler
-  
+  byte tmp_val = 0; //Used as placeholder for area[x][y] because compiler complains otherwise
+   
   for(int x = 0; x < 100; x++) {
-  
    for(int y = 0; y < 64; y++) {
     tmp_val = area[x][y];
     Return_Code = Write(Handle, tmp_val); //Write Byte
+    //TODO: Actually check return code in loop (if it doesn't affect performance, can't check)
    };
-
+  
    //tmp_val = area[x][63];
    //Return_Code = WriteLn(Handle, tmp_val); //Write Byte
-   
+  
    /*if(Return_Code != LDR_SUCCESS) {
-    CenterTextOut(LCD_LINE5, "ERR: " + NumToStr(Return_Code));
-    break;
-   };*/
+     CenterTextOut(LCD_LINE5, "ERR: " + NumToStr(Return_Code));
+     break;
+    };*/
   };
 
   if(Handle) { CloseFile(Handle); };
@@ -157,7 +159,6 @@ void Show() {
   CenterTextOut(LCD_LINE4, "Finished!");
   return;
  };
- 
  //END SAVE_FILE
  
  bool left = false;
@@ -167,16 +168,16 @@ void Show() {
   right = BTNPRESSED(BTNRIGHT);
 
   if(left) {
-   margin = margin - 1; // -= ??
+   margin -= 1; //TODO: check if compiler allows += / -=
   };
   if(right) {
-   margin = margin + 1;
+   margin += 1;
   };
   if(left || right) {
    ClearScreen();
    CenterTextOut(LCD_LINE3, "Margin: " + NumToStr(margin));
    CenterTextOut(LCD_LINE5, "Press Center");
-   CenterTextOut(LCD_LINE6, "to ontinue...");
+   CenterTextOut(LCD_LINE6, "to continue...");
   };
   
   if(BTNPRESSED(BTNCENTER)) {

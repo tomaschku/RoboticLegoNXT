@@ -3,11 +3,11 @@
 //http://bricxcc.sourceforge.net/nbc/nxcdoc/nxcapi/examples.html
 
 /*task main() {
-  //???? Does nothing  RemoteStartProgram(CONN_BT1, "testBattery.rxe"); // OBSERVATION: if a pg is already running on the slave, it is not stopped.
+  //???? Does nothing  RemoteStartProgram(CONN_BT1, "testBattery.rxe"); // OBSERVATION: If a program is already running on the slave, it is not stopped.
 
   // Stop it
-  //RemoteStopProgram(CONN_BT1);//  ERROR (Unknowmn/Invalidf statememnt)
-  // OBSERVATION: if a pg was already running on the slave, RemoteStopProgram()
+  //RemoteStopProgram(CONN_BT1);//  ERROR (Unknowmn/Invalid statememnt)
+  // OBSERVATION: If a program was already running on the slave, RemoteStopProgram()
   // stops it and start "PlayClick.rxe" instead like if RemoteStartProgram() had
   // queued it.
   
@@ -24,15 +24,19 @@
   //???RemoteSetOutputState(CONN_BT1, OUT_A, 50, OUT_MODE_REGULATED, OUT_REGMODE_SPEED, 0, OUT_RUNSTATE_RUNNING, 180);
   
   // OBSERVATION: this call does not work: the motor on the slave stops.
-  // Maybe it is because I do not use turnpct, but I do not know what this arg
-  // is for.
+  // Maybe it is because I do not use turnpct.
   
   // Deactivate it
   //???RemoteSetOutputState(CONN_BT1, OUT_A, 0, OUT_MODE_COAST, 0, 0, OUT_RUNSTATE_RUNNING, 0);
+  
   // Send keep alive notification
-//  RemoteKeepAlive(CONN_BT1); Error
+  // RemoteKeepAlive(CONN_BT1); Error
+  
+  //From here nothing has been tested ========================
+  
   // Start monitoring of inputs and outputs on slave
-  RemoteStartProgram(CONN_BT1, "DisplayInput.rxe");  //ab hier not testes
+  RemoteStartProgram(CONN_BT1, "DisplayInput.rxe");
+  
   // Turn the motor (slave should display a value != 0)
   RemoteSetOutputState(CONN_BT1, OUT_A, 70, OUT_MODE_MOTORON, 0, 0, OUT_RUNSTATE_RUNNING, 30);
   // Reset its position (slave should display a value of 0)
@@ -62,14 +66,14 @@ Interesting Functions:
  RemoteConnectionIdle (Used in many functions)
  RemoteGetBatteryLevel
  RemoteGetBluetoothAddress (Is the address not already known?)
- GetBTDeviceAddress (Get Address -"-?)
+ GetBTDeviceAddress (Is the address not already known?)
  RemoteGetCurrentProgramName
  RemoteGetDeviceInfo (Free Mem, etc; Why not)
- RemoteGetFirmwareVersion (MAYBE => Check if it can output TextOut Formats?)
+ RemoteGetFirmwareVersion (Maybe a check if firmware supports TextOut formatting?)
  RemoteGetInputValues (Read Status of ANY Sensor)
  RemoteGetOutputState (Read Status of ANY Motor)
  RemoteGetProperty (Basic Settings like soundlevel)
- RemoteSetProperty (-"-)
+ RemoteSetProperty (Basic Settings like soundlevel)
  RemoteKeepAlive
  RemoteSetBrickName
  RemoteSetInputMode (Set Port up for specific Sensor)
@@ -105,7 +109,7 @@ Interesting Functions:
  RemoteStopProgram
  
 -Ideas
- TransferFile (Transfering Byte by Byte; Download custom Program first that handles that first)
+ TransferFile (Transfering Byte by Byte; Download custom Program first that handles the transfer)
 */
 
 task main()

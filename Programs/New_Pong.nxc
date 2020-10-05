@@ -23,6 +23,7 @@ int iPCY;
 int iBALLX;
 int iBALLY;
 int iBALLDIR; //Expected: 1=LU \ 2=RU \ 3=RD \ 4=LD   || Real: 1=LD \ 2=RD \ 3=RU \ 4=LU
+/* I don't know why the numbers and directions don't agree but it has worked somehow so who cares. */
 bool PCup;
 int iGameSpeed;
 //==========END VARIABLES==========
@@ -61,10 +62,7 @@ void draw() {
  RectOut(iBALLX, iBALLY, 2, 2, DRAW_OPT_NORMAL+DRAW_OPT_LOGICAL_XOR+DRAW_OPT_FILL_SHAPE);
 }
 void refresh() {
- /* ############################
-  * ########NOT PATCHED!########
-  * ############################
-  */
+ //Something hasn't yet been patched here and I forgot how to fix it. Anyway...
  if(BTNPRESSED(BTNLEFT) == 1) {iPLAYERY = iPLAYERY + dStep;} else {
   if(Sensor(IN_1) == 1) {iPLAYERY = iPLAYERY + dStep;};
  };
@@ -169,7 +167,7 @@ void won(bool win) {
  if(win) {//Player
   TextOut(40, LCD_LINE4, "WON!");
  } else {//PC
-  TextOut(35, LCD_LINE4, "Lose...");
+  TextOut(35, LCD_LINE4, "Lost...");
  };
  BTN_EXIT_FLAG(false);
  Wait(10000);
@@ -217,7 +215,7 @@ void debug() {
    ClearScreen();
    CenterTextOut(LCD_LINE2, "DEBUG MODE");
    CenterTextOut(LCD_LINE4, "Game Loop Delay");
-   CenterTextOut(LCD_LINE5, NumToStr(iGameSpeed) + "MS");
+   CenterTextOut(LCD_LINE5, NumToStr(iGameSpeed) + "ms");
    if(BTNPRESSED(BTNCENTER)) {
     debug = 3;
    };
@@ -233,4 +231,4 @@ void debug() {
   };
  };
 }
-//===========END FUNCTIONS========ÅE
+//===========END FUNCTIONS========Å

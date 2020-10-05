@@ -1,5 +1,7 @@
 #include "\EasyCoding\EasyCoding.nxc"
 
+//This is mostly meant as a all-in-one control program, though it acts more like a sandbox
+
 //Menu Items
 string Menu[] = {"Debug", "Button Stats", "BT Communication"};
 //Text for specific Menu Items
@@ -237,7 +239,7 @@ void Menu_BTCommunication()
     NumOut(35, LCD_LINE4, BT_ONOFF.Result);
     CenterTextOut(LCD_LINE5, "Command module >");
     CenterTextOut(LCD_LINE6, "Errors list");
-    CenterTextOut(LCD_LINE7, "Pls report to me");
+    CenterTextOut(LCD_LINE7, "Send GithubIssue");
     pause();
     abort();
   };
@@ -271,7 +273,7 @@ void Menu_BTCommunication()
     Wait(5*1000);
   };
   
-  //Turn BT off (can't check yet if it was active beforehand)
+  //Turn BT off (can't check yet if it was active beforehand, i think)
   BT_ONOFF.PowerState = false;
   SysCommBTOnOff(BT_ONOFF);
   return;

@@ -1,6 +1,4 @@
-//The Error "task main not found" is normal! DO NOT ADD TASK MAIN HERE!
-
-//This is so existing programs still work
+//This is so (my) existing programs still work
 #include "../EasyCoding/Rect.nxc"
 #include "../EasyCoding/MoreStrings.nxc"
 

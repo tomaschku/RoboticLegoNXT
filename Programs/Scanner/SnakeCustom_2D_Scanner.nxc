@@ -1,4 +1,7 @@
-//RotateMotor(MOTX, -50, 85); //1 cm
+//Final attempt to make the scanner work with 2 dimensions, faster and with better snake movement
+
+//Calibration Stuff: RotateMotor(MOTX, -50, 85); //1 cm
+
 #include "../EasyCoding/EasyCoding.nxc"
 #define MOTX OUT_A
 #define MOTY OUT_B
@@ -73,8 +76,8 @@ void Reset() {
 void Scan() {//Scan-Routine
  Status("Scanning");
 
- //This only makes sense with the building
- //Y Axe = NXT Face Direction
+ //This only makes sense with the physicall building aka. has to be changed depending of recreation
+ //Y Axe = NXT Face Direction (Assuming NXT is laying down with the screen facing upwards)
  //X Axe = NXT Sideways
  //Right/Left = Y
  //Forward/Backward = X
@@ -86,17 +89,17 @@ void Scan() {//Scan-Routine
   
   if(forward) {
    pos.Y = 0;
-   OnFwd(MOTY, 65); //50    75=X+3
-   while(pos.Y < 64 && Sensor(TSX) == 0/*Else X-Break doesn't work*/ && Sensor(TSY) == 0) {//While not touching
+   OnFwd(MOTY, 65);
+   while(pos.Y < 64 && Sensor(TSX) == 0/*Else X-Axe-Break doesn't work*/ && Sensor(TSY) == 0) {//While not touching
     area[pos.X][pos.Y] = Sensor(LS);
     if(area[pos.X][pos.Y] < margin) {
      LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_NORMAL);
     } else {
-     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If Buffer for testing is inverted
+     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If buffer for testing is inverted
     };
 
     pos.Y = pos.Y + 1;
-    Wait(35); //60      35=X*3
+    Wait(35);
    };
   };
   
@@ -108,7 +111,7 @@ void Scan() {//Scan-Routine
     if(area[pos.X][pos.Y] < margin) {
      LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_NORMAL);
     } else {
-     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If Buffer for testing is inverted
+     LineOut(pos.X * LineWidth, pos.Y, (pos.X * LineWidth) + (LineWidth-1), pos.Y, DRAW_OPT_CLEAR); //If buffer for testing is inverted
     };
     
     pos.Y = pos.Y - 1;
@@ -132,18 +135,19 @@ void Show() {
  ClearScreen();
  
  //Select Option
- CenterTextOut(LCD_LINE5, "Display <> File");
+ CenterTextOut(LCD_LINE5, "Display or File");
  while(!BTNPRESSED(BTNLEFT) && !BTNPRESSED(BTNRIGHT)) { Wait(20); };
  ClearScreen();
  
- if(BTNPRESSED(BTNRIGHT)) {  //Else continue to Display it locally
+ if(BTNPRESSED(BTNRIGHT)) {
   //Save to File
   byte Handle = 0;
-  unsigned int Return_Code = CreateFile(FNAME, 6400, Handle); //How many Bytes?   (Width X)100 * 64(Height Y) === 6400 Bytes
+  unsigned int Return_Code = CreateFile(FNAME, 6400, Handle); //100(Width X) * 64(Height Y) = 6400 Bytes
   if(Return_Code == LDR_SUCCESS) {
    unsigned int TMP_FSIZE = 0;
    if(Handle == 0) { OpenFileRead(FNAME, TMP_FSIZE, Handle); };
   } else {
+   //Show error
    if(Handle) { CloseFile(Handle); };
    DeleteFile(FNAME);
    CenterTextOut(LCD_LINE5, "Error R_C");
@@ -154,7 +158,7 @@ void Show() {
   
   Return_Code = 0;
   CenterTextOut(LCD_LINE4, "Copying...");
-  byte tmp_val = 0; //Used as placeholder for area[x][y] because of the crappy Compiler
+  byte tmp_val = 0; //Used as placeholder for area[x][y] because compiler complains otherwise
   
   for(int x = 0; x < 100; x++) {
   
@@ -177,7 +181,6 @@ void Show() {
   CenterTextOut(LCD_LINE4, "Finished!");
   return;
  };
- 
  //END SAVE_FILE
  
  bool left = false;
@@ -187,10 +190,10 @@ void Show() {
   right = BTNPRESSED(BTNRIGHT);
 
   if(left) {
-   margin = margin - 1; // -= ??
+   margin -= 1;
   };
   if(right) {
-   margin = margin + 1;
+   margin += 1;
   };
   if(left || right) {
    ClearScreen();
