@@ -1,0 +1,154 @@
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/**
+* @file class.nxc
+* \ingroup debug
+*
+* @brief Class handler for Debug-Functions
+*
+**/
+
+/*
+   01.03.2013
+   CHANGELOG:
+      -> fixed bug when passing no value for class the program crashes
+   TODO:
+   BUGS:
+*/
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#ifndef __CLASS_H_
+#define __CLASS_H_
+
+#define CLASS_MODULE
+
+/// \cond
+#ifdef CLASS_MODULE
+struct sClass
+{
+   bool flags[];
+   bool scope[];
+   unsigned int instances;
+};
+
+sClass mClass;
+#endif
+/// \endcond
+
+/**
+ * \brief Initialize the class module.
+ *
+ * Specifie how many classes you want to have in your project.
+ *
+ * \param instances    Number of classes to initialize.
+*/
+inline void initClass(const unsigned int instances = 0)
+{
+   #ifdef CLASS_MODULE
+   mClass.instances = instances + 1;
+   if(instances > 0) {
+      ArrayInit(mClass.flags, 0, mClass.instances);
+      ArrayInit(mClass.scope, 0, mClass.instances);
+   }
+   #endif
+}
+
+
+/**
+ * \brief Set class activation flag
+ *
+ * Set a class flag so that "messages" from this class are
+ * blocked or not blocked. This function does nothing if the class
+ * is not a valid class.
+ *
+ * \param class    Class address
+ * \param flag     True for allow
+*/
+inline void setClassFlag(unsigned int class, bool flag)
+{
+   #ifdef CLASS_MODULE
+   if(class < mClass.instances)
+      mClass.flags[class] = flag;
+   #endif
+}
+
+
+/**
+ * \brief Set the begin for e class scope.
+ *
+ * All functions with standard parameters for class use
+ * from scope begin to scope end the specified class.
+ * Do not mix scopes! (this will lead to confusing code)
+ *
+ * \param class  Class adress
+*/
+inline void setClassScopeBegin(const unsigned int class)
+{
+   #ifdef CLASS_MODULE
+   // reset scopes, to avoid mixing scopes
+   // do i need this
+   for(int i = 0; i < mClass.instances; ++i)
+      mClass.scope[i] = false;
+
+   if(class < mClass.instances)
+      mClass.scope[class] = true;
+   #endif
+}
+
+
+/**
+ * \brief Set the end for e class scope.
+ *
+ * End for all scopes.
+*/
+inline void setClassScopeEnd()
+{
+   #ifdef CLASS_MODULE
+   for(int i = 0; i < mClass.instances; ++i)
+      mClass.scope[i] = false;
+   #endif
+}
+
+/**
+ * \brief Returns class states
+ *
+ * Returns the actual state from a specified class.
+ * If you pass NA the function will look if theres an
+ * active scope on one class otherwise it will take main-class (0)
+ * If class = 0 the function will always return true (main) otherwise it
+ * will return the flag from the given class.
+ *
+ * \param class  Class adress
+*/
+bool classHandler(unsigned int class = NA)
+{
+   #ifdef CLASS_MODULE
+   bool scope_available;
+   
+   if(class == NA) {                   // function parameter top priority
+      for(int i = 0; i < mClass.instances; ++i) {
+         if(mClass.scope[i]) {
+            class = i;
+            scope_available = true;
+            break;
+         }
+      }
+   }
+   
+   if(!scope_available && class == NA)
+      class = 0;
+      
+   scope_available = false;
+   
+   if(class == 0)
+      return true;
+   
+   if(mClass.flags[0])
+      return true;
+   else
+      return mClass.flags[class];
+   #endif
+}
+
+#endif
+

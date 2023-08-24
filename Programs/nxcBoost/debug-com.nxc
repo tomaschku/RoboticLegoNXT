@@ -1,0 +1,178 @@
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/**
+* @file debug-com.nxc
+* \ingroup debug
+*
+* @brief Remote debugging functions
+*
+**/
+
+/*
+   CHANGELOG:
+   TODO:
+   BUGS:
+*/
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "com.nxc"
+#include "class.nxc"
+
+
+#ifndef __DEBUG_COM_H_
+#define __DBEUG_COM_H_
+
+
+
+/// Do not define if you make a release executable with no debugging
+#ifndef DEBUG_COM_OFF
+#define DEBUG_COM
+#endif
+
+/// \cond
+#ifdef DEBUG_COM
+// debug module uses other standard parameters
+sCom mDebugCom;
+#endif
+/// \endcond
+
+
+/**
+ * \brief Initialize the communication module.
+ *
+ * Use this to initialize the communication module.
+ * The paramters are set to default values.
+ * Standard send-time = 500 ms.
+ * You can initialize the com-module with other standard
+ * in/outbox or sendTime. The send-time is used after every send function.
+ *
+ * \param outbox      Set default outbox for sending messages.
+ *                    (0-8)
+ * \param sendTime    Time in milliseconds.
+*/
+void initComDebug(const byte outbox = 0, const unsigned long sendTime = 500)
+{
+   #ifdef DEBUG_COM
+   initCom();  // initCom Ok????
+   mDebugCom.SendTime = sendTime;
+   mDebugCom.Outbox = outbox;
+   #endif
+}
+
+
+/**
+ * \brief Set default send-time
+ *
+ * You may set a new default send time.
+ * Standard wait-time is 500ms.
+ * Use high values so that you can follow the message stream.
+ * The send-time is used after every send function.
+ *
+ * \param sendTime Time in milliseconds.
+*/
+void setComDebugSendTime(const unsigned long sendTime)
+{
+   #ifdef DEBUG_COM
+   mDebugCom.SendTime = sendTime;
+   #endif
+}
+
+
+/**
+ * \brief Set default outbox.
+ *
+ * You may set a new default outbox.
+ * Standard outbox is 0.
+ *
+ * \param outbox See nxc api for more information.
+*/
+void setComDebugOutbox(const byte outbox)
+{
+   #ifdef DEBUG_COM
+   mDebugCom.Outbox = outbox;
+   #endif
+}
+
+
+
+/**
+  * \brief Send a debug message to outbox.
+  *
+  *  Send a debug message to specified outbox and wait for time ms.
+  *  Designed for simplicity: send("No other parameters");
+  *  Read class description for more information!
+  *
+  * \param  message      Any String. (Text)
+  * \param  class        The class which the message belongs to.
+  * \param  time         The send time in milliseconds.
+*/
+void sendDebug(const string message,
+               unsigned int class = NA,
+               unsigned long time = NA)
+{
+   #ifdef DEBUG_COM
+   if(time == NA) time = mDebugCom.SendTime;
+
+   if(classHandler(class))
+      send(message, time, mDebugCom.Outbox);
+   #endif
+}
+
+
+
+
+/**
+  * \brief Send a debug number to outbox.
+  *
+  *  Send a debug number to specified outbox and wait for time ms.
+  *  Designed for simplicity: send(10.01);
+  *  Read class description for more information!
+  *
+  * \param  number       Any number.
+  * \param  class        The class which the message belongs to.
+  * \param  time         The send time in milliseconds.
+*/
+void sendDebugNum(float number,
+                  unsigned int class = NA,
+                  unsigned long time = NA)
+{
+   #ifdef DEBUG_COM
+   if(time == NA) time = mDebugCom.SendTime;
+
+   if(classHandler(class))
+      sendNum(number, time, mDebugCom.Outbox);
+   #endif
+}
+
+
+
+
+/**
+  * \brief Send a debug message to outbox.
+  *
+  *  Send a debug message to specified outbox and wait for time ms.
+  *  Designed for simplicity: send("No other parameters");
+  *  Read class description for more information!
+  *
+  * \param  format       A string specifying the desired format.
+  *                      See nxc api sprintf or ex_console.
+  * \param  number       The number to send in the specified format.
+  * \param  class        The class which the message belongs to.
+  * \param  time         The send time in milliseconds.
+*/
+void sendDebugF(const string format,
+                const float number,
+                unsigned int class = NA,
+                unsigned long time = NA)
+{
+   #ifdef DEBUG_COM
+   if(time == NA) time = mDebugCom.SendTime;
+
+   if(classHandler(class))
+      sendF(format, number, time, mDebugCom.Outbox);
+   #endif
+}
+
+
+#endif
+

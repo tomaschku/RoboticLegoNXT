@@ -1,0 +1,40 @@
+
+
+#include "gui.nxc"
+
+// GUI Example 2
+// Do some stuff with sliders!
+task main()
+{
+   int slide1, slide2;
+   int pb1, pb2;
+
+   newSlider(5, 40, 50, 16, 0, 100, SLIDER_H, slide1);
+   newProgressBar(5, 10, 50, 16, 0, 100, PROGRESS_BAR_H, pb2);
+
+   objectShow(slide1);
+   objectShow(pb2);
+
+   SliderSet(slide1, 50);
+   ProgressBarSet(pb1, 50);
+
+   // press buttons to move the slider !
+   while(true) {
+      Wait(100);
+      int but = getchar();
+      if(but == BTNRIGHT) {
+         SliderAdd(slide1, 5);
+         ProgressBarAdd(pb1, 5);
+      }
+      else if(but == BTNLEFT) {
+         SliderAdd(slide1, -5);
+         ProgressBarAdd(pb1, -5);
+      }
+      else if(but == BTNCENTER)
+         break;
+   }
+
+   deleteObject(slide1);
+   deleteObject(pb1);
+   Wait(2000);
+}

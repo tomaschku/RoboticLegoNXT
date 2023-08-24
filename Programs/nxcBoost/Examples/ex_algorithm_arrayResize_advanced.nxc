@@ -1,0 +1,103 @@
+#include "algorithm.nxc"
+#include "console.nxc"
+
+// Ex 2
+// resize big arrays, advanced timing tutorial
+task main()
+{
+   initConsole();
+   cout("Show Resize Time");
+
+   // lets say you have a function which do not know
+   // at the begin how big the array should be
+   // for exmaple tokenize (function in boost) do not know at the begin
+   // how much tokens it will find in an string...
+   // now the first try would be to make it always
+   // bigger and bigger if we need more length
+   // (make sure your nxt has enough memory. file error -5)
+   string array1[1];
+
+   // resize the array to len 95 in 5 steps
+   long t0 = CurrentTick();
+   for(int i=1; i<20; i++) {
+      // some code
+      // we need more memory, otherwise break;
+      arrayResizeStr(array1, i*5);
+   }
+   long time = CurrentTick() -t0;
+
+   cout("resize to 100|5");
+   int len = ArrayLen(array1);
+   coutF("Len : %.0f", len);
+   coutF("Time: %.0f ms", time, 2000);
+   cout("------------------");
+   // ~4400 ms  thats really a bad idee ;)
+
+   // reset Array
+   t0 = CurrentTick();
+   arrayResizeStr(array1, 1);
+   time = CurrentTick() -t0;
+
+   setConsoleTime(SEC_1);
+   cout("resize down to 1");
+   coutF("Time: %.0f ms", time);
+   cout("------------------");
+   // ~4 ms
+   // in this case it would be better to use ArrayInit
+   // note that ArrayInit do not take care of data!
+
+   //////////////////////////////////////////////
+   // lets try bigger steps
+   // resize the array to len 95 in 19 steps
+   t0 = CurrentTick();
+   for(int i=1; i<4; i++) {
+      arrayResizeStr(array1, i*19);
+   }
+   time = CurrentTick() -t0;
+
+   cout("resize to 95|19");
+   coutF("Time: %.0f ms", time);
+   cout("------------------");
+   
+   // ~1000 ms  thats better but lets see
+   // how fast the direct way would be
+
+   // reset array
+   ArrayInit(array1, "", 1);
+   ////////////////////////////////////////////////////
+
+   // direct resize the array to len 100
+   t0 = CurrentTick();
+   arrayResizeStr(array1, 100);
+   time = CurrentTick() - t0;
+
+   cout("resize direct");
+   coutF("Time: %.0f ms", time);
+   cout("------------------");
+   // ~11ms, Wow what a difference!
+
+   ArrayInit(array1, "", 1);
+   //////////////////////////////////////////////////////
+
+   // Now the best way to use resize is
+   // to first resize to a big size
+   // you may resize it to higher value if unexpected
+   // things happen ;)
+   t0 = CurrentTick();
+   arrayResizeStr(array1, 100);
+
+   // now we need only 60 (for ex: we found 60 tokens)
+   arrayResizeStr(array1, 60);
+   time = CurrentTick() -t0;
+
+   cout("best way");
+   coutF("Time: %.0f ms", time);
+   cout("------------------");
+   // ~18ms thats a acceptable time for creating 100
+   // elments in an array, than cut 40 elments and save
+   // the rest of the elments...
+
+   // look through the code of tokenize, arrayMaxPosEx how i solved the problem
+
+   until( kbhit() );
+}

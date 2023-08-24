@@ -1,0 +1,37 @@
+
+#include "algorithm.nxc"
+#include "console.nxc"
+
+// Ex2
+// find tokens separated by multiple delimiters
+task main()
+{
+   initConsole();
+   setConsoleTime(SEC_1);
+
+   string test = "{zero-one*two-three*four-five*six-seven*eight-nine*ten}";
+   // so our delimiters are
+   string delimiters[] = {"{", "-", "*", "}"};
+   // tokens must be a uninitialized array!
+   string tokens[];
+
+   int tokens_count;
+   cout("Tokenize String", 0);
+   tokens_count =  tokenizeEx(test, delimiters, tokens);
+
+   coutF("Found %.0f tokens", tokens_count);
+
+   // show tokens
+   for(int i; i < tokens_count; ++i) {
+      coutF("%.0f: ", i, 0, false);
+      cout( tokens[i] );
+   }
+
+   /* note that tokenizeEx need a lot of processing
+   *  time. The number of delimiters make a huge impact
+   *  on perfomance */
+
+   until( kbhit() );
+}
+
+

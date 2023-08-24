@@ -1,0 +1,19 @@
+
+
+// include the boost library
+#include "console.nxc"
+
+// 1. Example
+// easy output
+task main()
+{
+   // first initialize the module!
+   initConsole();
+
+   // now we can simply make outputs
+   cout("test1");
+   cout("test2");
+
+   // Wait so we can see the screen
+   Wait(SEC_10);
+}

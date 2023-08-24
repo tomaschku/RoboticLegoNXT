@@ -1,0 +1,74 @@
+
+// include the boost library
+#include "console.nxc"
+
+
+// 2. Example
+// Make different outputs
+task main()
+{
+   // first initialize the module!
+   initConsole();
+
+   // make a output and wait 2 sec
+   cout("test1 - wait", SEC_2);
+
+   // make a normal output without waiting
+   cout("test2");
+
+   // write a nuber (no wait)
+   coutNum(12345);
+
+   // write number and wait 3s
+   coutNum(6789, SEC_3);
+
+   // write a text wiht a number (+wait)
+   // the number will be at the position of %0.f
+   int number = 5;
+   coutF("My number = %.0f", number, SEC_2);
+   // prints: My number = 5
+
+   // you could also use the endl paramter
+   // note that the console do not enter next line if
+   // you set the third parameter to false!
+   cout("My number = ", 0, false); coutNum(number, SEC_2);
+   // prints: My number = 5
+
+   // what if you want to first print the number then the string?
+   // The endl para. makes formatting easy!
+   coutNum(7, 0, false);
+   cout(". Line:", 0, false);
+   cout(" easy! ", SEC_2);
+   // prints: 7. Line: easy!
+
+   // wait until the user press any button
+   cout("wait button press..");
+   until( kbhit() );
+   cout("stop program", SEC_3);
+}
+
+// INFO
+// Why cout ??
+// cout stands for Console OUT and it should be similar to the cout
+// standard output in C++
+// If you want to write a line in C++ and end the line you write:
+// cout << "Hello World << endl;    (without namespace)
+
+// So in C++ you can do cool things like mixing data types in outputs
+// cout << "Number: " << 10 << "- Variable: " << var << endl;
+// Output:   Number: 10 - Variable: 10
+
+// If you want to do something similar in nxc with my console you write:
+// setConsoleEndl(false);
+// cout("Number: "); coutNum(10); cout(" - Variable: "); coutNum(var, NA, true);
+
+// I know you can do something like this:
+// cout( StrCat("Number: ", NumToStr(10), " - Variable: ", NumToStr(var)) )
+// but in my opinon this looks not good and its not really shorter;)
+
+// this would be shorter:
+// setConsoleEndl(false);
+// coutF("Number: %.0f", 10); coutF(" - Variable: %.0f", var, true);
+
+
+

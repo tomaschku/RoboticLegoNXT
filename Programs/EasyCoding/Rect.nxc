@@ -1,3 +1,5 @@
+//The Error "task main not found" is normal! DO NOT ADD TASK MAIN HERE!
+
   //(0|0) point is the Top-Left corner
 struct Rect {
   int X;

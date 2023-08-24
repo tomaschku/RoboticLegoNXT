@@ -1,0 +1,201 @@
+byte BT_CONN = -1;
+//https://github.com/dlech/nxt-firmware/blob/master/AT91SAM7S256/Source/c_cmd.c
+//~1030 ~1250 https://github.com/dlech/nxt-firmware/blob/master/AT91SAM7S256/Source/c_comm.c
+//some function could set no value and instead return -1. return -1 too?
+//BTT = Affect only local NXT
+//BTO = Also/Only affect other device
+
+task main() {}; //TESTING WITHOUT ERRORS
+
+//Helper
+byte _VerifyConn_(byte conn) {
+  byte safe_conn = conn == -1 ? BT_CONN : conn;
+  if(safe_conn == -1) { abort(); };
+  return conn;
+};
+
+
+//Misc
+bool BT_IsInUse(byte conn = -1) { //Can the remote device accept commands/data
+  byte tmp_conn = _VerifyConn_(conn);
+  return !RemoteConnectionIdle(tmp_conn);
+};
+void BT_WaitForIdle(byte conn = -1) { //Wait until the remote device can accept commands/data again
+  byte tmp_conn = _VerifyConn_(conn);
+  while(!RemoteConnectionIdle(tmp_conn)) {}; //Not using above function because speed (effective?)
+};
+void BT_KeepAlive(byte conn = -1) { //Keep the connection alive, mostly used when inactivity is expected
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteKeepAlive(tmp_conn);
+  
+  BT_WaitForIdle(conn);
+};
+
+//Add File editing Functions?
+//RemoteDeleteFile
+//RemoteDeleteUserFlash
+//RemoteFindFirstFile
+//RemoteFindNextFile
+
+string BTT_GetName() { return BrickDataName(); }; //Get local NXT name
+
+byte BTT_GetTimeout() { return BrickDataTimeoutValue(); }; //Get local NXT Timeout Value
+
+byte BTT_GetKnownDeviceCount() { //Get local NXT known device count
+  return BTDeviceCount();
+};
+
+void BTT_GetBTAddress(byte &out[]) { //Get BT address of local NXT (6 Bytes)
+  byte data[];
+  GetBrickDataAddress(data);
+
+  ArrayInit(out, 0, 6);
+  out = data;
+};
+
+string BTO_GetName(byte conn = -1) { //Get remote device name (Max. 8 chars)
+  byte tmp_conn = _VerifyConn_(conn);
+  return BTConnectionName(tmp_conn);
+};
+
+void BTO_GetBTAddress(byte &out[], byte conn = -1) { //Get BT address of remote device (6 Bytes)
+  byte data[];
+  byte tmp_conn = _VerifyConn_(conn);
+  GetBTConnectionAddress(tmp_conn, data);
+  //RemoteGetBluetoothAddress ???
+  
+  ArrayInit(out, 0, 6);
+  out = data;
+};
+
+string BTO_GetPin(byte conn = -1) { //Get Pin Code of remote device (4 digit number)
+  byte tmp_conn = _VerifyConn_(conn);
+  return BTConnectionPinCode(tmp_conn);
+};
+
+void BTO_SetBrickName(string name, byte conn = -1) { //Set remote device name (Max. 8 chars)
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteSetBrickName(tmp_conn, name);
+  
+  BT_WaitForIdle(conn);
+};
+
+void BTO_GetDeviceInfo(string &name, byte &btaddr[], byte &btsignal[], long &freemem, byte conn = -1) { //Get remote device (NXT) name, BT address, Signal strength and free memory
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteGetDeviceInfo(tmp_conn, name, btaddr, btsignal, freemem);
+};
+
+void BTO_PlaySoundFile(string filename, bool loop, byte conn = -1) { //Play specified sound file on remote NXT
+  byte tmp_conn = _VerifyConn_(conn);
+  RemotePlaySoundFile(tmp_conn, filename, loop);
+
+  BT_WaitForIdle(conn);
+};
+
+void BTO_PlayTone(unsigned int freq, unsigned int dur, byte conn = -1) { //Play tone on remote NXT
+  byte tmp_conn = _VerifyConn_(conn);
+  RemotePlayTone(tmp_conn, freq, dur);
+
+  BT_WaitForIdle(conn);
+};
+
+void BTO_StopSound(byte conn = -1) { //Stop playing tones/sound files on remote NXT
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteStopSound(tmp_conn);
+
+  BT_WaitForIdle(conn);
+};
+
+byte BTO_GetBatteryLevel(byte conn = -1) { //Get remote NXT battery level (in millivolts)
+  int data;
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteGetBatteryLevel(tmp_conn, data);
+  return data;
+};
+
+byte BTO_GetConnectionCount(byte conn = -1) { //Get count of currenlty connected devices from the other device?
+  byte data;
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteGetConnectionCount(tmp_conn, data);
+  return data;
+};
+
+string BTO_GetCurrentProgramName(byte conn = -1) { //Get currently running program on remote NXT
+  string data;
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteGetCurrentProgramName(tmp_conn, data);
+  return data;
+};
+
+void BTO_StartProgram(string filename, byte conn = -1) { //Start program on remote NXT
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteStartProgram(tmp_conn, filename);
+
+  BT_WaitForIdle(conn);
+};
+
+void BTO_StopProgram(byte conn = -1) { //Stop program on remote NXT
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteStopProgram(tmp_conn);
+
+  BT_WaitForIdle(conn);
+};
+
+void BTO_SetSensor(byte port, byte type, byte mode, byte conn = -1) { //Set sensor port, type and mode of the remote NXT
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteSetInputMode(tmp_conn, port, type, mode);
+  
+  BT_WaitForIdle(conn);
+};
+
+void BTO_GetSensorValues(InputValuesType params, byte conn = -1) { //Get sensor values from remote NXT
+  //TODO: Research Sensors more closely
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteGetInputValues(tmp_conn, params);
+};
+
+void BTO_ResetSensorScaledValue(byte port, byte conn = -1) { //Reset Sensors scaled Value from remote NXT
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteResetScaledValue(tmp_conn, port);
+  
+  BT_WaitForIdle(conn);
+};
+
+//Maybe add a more intuitive variant(s) (and a stop function?)
+void BTO_SetMotor(byte port, byte speed, byte mode, byte regmode, byte turnpct, byte runstate, unsigned long tacholimit, byte conn = -1) {
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteSetOutputState(tmp_conn, port, speed, mode, regmode, turnpct, runstate, tacholimit);
+  
+  BT_WaitForIdle(conn);
+};
+void BTO_GetMotorValues(OutputStateType params, byte conn = -1) { //Like above
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteGetOutputState(tmp_conn, params);
+};
+
+void BTO_ResetMotorPosition(byte port, bool relative, byte conn = -1) {
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteResetMotorPosition(tmp_conn, port, relative);
+
+  BT_WaitForIdle(conn);
+};
+
+void BTO_ResetMotorTachoCount(byte port, byte conn = -1) {
+  byte tmp_conn = _VerifyConn_(conn);
+  RemoteResetTachoCount(tmp_conn, port);
+
+  BT_WaitForIdle(conn);
+};
+//Splitting RemoteGet/SetPrperty up?
+//LowspeedGetStatus ?! What does this do? Also should other functions related to this be wrapped?
+
+//Mailbox / Messaging System
+//JoystickExMessageRead
+//JoystickMessageRead
+//ReceiveMessage
+//ReceiveRemoteBool
+//ReceiveRemoteMessageEx
+//ReceiveRemoteNumber
+//ReceiveRemoteString
+//RemoteMessageRead
+//RemoteMessageWrite

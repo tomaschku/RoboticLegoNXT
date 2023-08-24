@@ -1,0 +1,25 @@
+
+
+
+#include "motorcontrollerDG.nxc"
+
+task main()
+{
+   initMC();
+
+   start Motor_Controller_Task;
+   Yield();   // Let the Task some time to start up
+   Wait(10);
+
+   // move both motors
+   moveRel(OUT_A, 1000, 100, false);
+   moveRel(OUT_B, 1000, 100, false);
+
+   Wait(1000);
+   TextOut(0, LCD_LINE1, "Emergency Stop!!");
+   motorEmergencyStop();
+   TextOut(0, LCD_LINE2, "Done.. end program");
+
+   Wait(2000);
+}
+

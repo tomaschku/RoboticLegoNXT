@@ -10,7 +10,7 @@ task keepAlive()
   while(true)
   {
     RemoteKeepAlive(BT_PORT);
-    Wait(30000); //Every 30 Seconds should be enough
+    Wait(30*1000); //Every 30 Seconds should be enough
   };
 };
 
@@ -26,9 +26,9 @@ task main()
   BTN_EXIT_FLAG(true);
   int Mode_idx = 0;
   int old_Mode_idx = 0;
-  int Selection_idx = 0;
+  int Selection_idx = 0; //For Sub-Menus
   
-  const int Info_Max = 2;
+  const int Info_Max = 2; //Max. count of pages
   
   while(true)
   {
@@ -47,22 +47,24 @@ task main()
 
           if(Selection_idx < 0) { Selection_idx = Info_Max; };
           if(Selection_idx > Info_Max) { Selection_idx = 0; };
-          
-          if(Selection_idx == 1) { goto Info2; };
-          
-          Info1:
-          CenterTextOut(LCD_LINE1, BTConnectionName(BT_PORT));
 
-          int level;
-          RemoteGetBatteryLevel(BT_PORT, level);
-          CenterTextOut(LCD_LINE3, "Battery: " + NumToStr(level) + "mV");
+          switch(Selection_idx)
+          {
+            case 0:
+              CenterTextOut(LCD_LINE1, BTConnectionName(BT_PORT));
 
-          string CurrentProgram;
-          RemoteGetCurrentProgramName(BT_PORT, CurrentProgram);
-          CenterTextOut(LCD_LINE4, "\"" + CurrentProgram + "\"");
-          continue;
-          
-          Info2:
+              int level;
+              RemoteGetBatteryLevel(BT_PORT, level);
+              CenterTextOut(LCD_LINE3, "Battery: " + NumToStr(level) + "mV");
+
+              string CurrentProgram;
+              RemoteGetCurrentProgramName(BT_PORT, CurrentProgram);
+              CenterTextOut(LCD_LINE4, "\"" + CurrentProgram + "\"");
+              break;
+            case 1:
+
+              break;
+          };
         };
 
         break;

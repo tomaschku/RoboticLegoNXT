@@ -1,0 +1,29 @@
+
+#include "algorithm.nxc"
+#include "console.nxc"
+
+
+// Ex1
+// find the maximum and minimum in an array
+
+task main()
+{
+   initConsole();
+
+   int myArray[] = {1, 2, 5, 0, -2, 3};
+
+   cout("Find Maximum");
+   int max_pos = arrayMaxPos(myArray);
+
+   coutF("Max = %0.f", myArray[max_pos]);
+   coutF("at position = %0.f", max_pos);
+
+   cout("Find Minimum");
+   int min_pos = arrayMinPos(myArray);
+
+   coutF("Min = %0.f", myArray[min_pos]);
+   coutF("at position = %0.f", min_pos);
+
+   until( kbhit() );
+}
+

@@ -1,0 +1,49 @@
+
+
+
+#include "motorcontrollerDG.nxc"
+
+task main()
+{
+   // we use only one motor
+   initMC(1);
+
+   start Motor_Controller_Task;
+   Yield();   // Let the Task some time to start up
+   Wait(10);
+
+   // normal motor functions
+   moveFwd(OUT_A, 50);
+   Wait(1000);
+
+   motorOff(OUT_A);
+   Wait(1000);
+
+   moveRev(OUT_A, 50);
+   Wait(1000);
+   motorOff(OUT_A);
+
+   Wait(2000);
+
+   // to positon 130
+   moveAbs(OUT_A, 260, 50);
+   // back to 0
+   // do not wait until complete
+   moveAbs(OUT_A,   0, 50, false);
+   
+   TextOut(0, LCD_LINE1, "Do some stuff");
+   
+   // now wait until motor rdy
+   waitMove(OUT_A);
+
+   TextOut(0, LCD_LINE2, "Ready for next move");
+
+   // shut down controller
+   controllerOff();
+   Yield();
+   Wait(10);
+   stop Motor_Controller_Task;
+
+   Wait(1000);
+}
+

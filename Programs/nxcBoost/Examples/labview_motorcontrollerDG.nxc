@@ -1,0 +1,52 @@
+
+#include "motorcontrollerDG.nxc"
+
+task main()
+{
+  start Motor_Controller_Task;
+  initMC();
+
+  long target;
+
+  initCom();
+  initConsole(2);
+  setComPollingTime(100);
+
+  while(true) {
+    string para_raw;
+    bool ret = receiveString(para_raw, 0, SEC_10*10);
+
+    if(!ret) {
+       cout("com error", SEC_5);
+       Stop(true);
+    }
+
+    string para[];
+    tokenize(para_raw, "-", para);
+
+    int phigh = StrToNum(para[0]);
+    int amax =   StrToNum(para[1]);
+    int vmax =   StrToNum(para[2]);
+    target = StrToNum(para[3]);
+
+    controllerPara(OUT_A, amax, vmax);
+
+    coutF("P_HIGH = %.0f",  phigh);
+    coutF("AMAX = %.0f",  amax);
+    coutF("VMAX = %.0f",  vmax);
+    coutF("t = %.0f",  target);
+
+    cout("go");
+    send("go");
+    start0 = true;
+    moveAbs(OUT_A, target, phigh);
+    Wait(300);
+    start0 = false;
+    send("stop");
+    cout("stop");
+
+    PlayTone(TONE_C4,100); Wait(100);
+    moveAbs(OUT_A, 0, phigh, false);
+
+  }
+}

@@ -1,0 +1,60 @@
+
+#include "algorithm.nxc"
+#include "console.nxc"
+
+
+// Ex
+// Use the color-sensor and hsl colour space
+// Connect color sensor to port 1
+task main()
+{
+   initConsole();
+   SetSensorColorFull(S1);
+   ResetSensor(S1);
+
+   int rgb[3];
+   int hsl[3];
+   
+   // from rgb2hsl documentation we know:
+   //  hue: 0° - 360°
+   //  0   -> red
+   //  60  -> yellow (for nxt 10-15)
+   //  120 -> green
+   //  180 -> light blue
+   //  240 -> blue
+   //  300 -> pink?
+   string colourName[] = {"red", "yellow", "green", "light blue", "blue", "pink", "red"};
+   int colours[]       = {0    , 11      , 120    , 180         , 240   , 300   , 360};
+   // nxt color sensor has big problems with yellow - orange !
+
+   while(true) {
+      cout("Press any button");
+      cout("to scan sample");
+      until( kbhit() );
+      
+      ReadSensorColorRaw(S1, rgb);
+      
+      rgb2hsl(rgb, hsl);
+      
+      // note that raw rgb values are between 0 - 1024 not 0 - 255
+      coutF("R = %.0f", rgb[INPUT_RED]);
+      coutF("G = %.0f", rgb[INPUT_GREEN]);
+      coutF("B = %.0f", rgb[INPUT_BLUE]);
+
+      coutF("H = %.0f", hsl[INPUT_HUE]);
+      coutF("S = %.0f", hsl[INPUT_SAT]);
+      coutF("L = %.0f", hsl[INPUT_LIGHT]);
+      
+      if(hsl[INPUT_LIGHT] < 77) {
+         // lets find the color
+         int distance;
+         int pos = nearestNeighbor(colours, hsl[INPUT_HUE], distance);
+         cout(colourName[pos], SEC_5);
+      }
+      else {
+         cout("To much light!", SEC_5);
+      }
+      
+   } // while
+   until( kbhit() );
+}

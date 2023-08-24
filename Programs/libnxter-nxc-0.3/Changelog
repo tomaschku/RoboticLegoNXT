@@ -1,0 +1,659 @@
+Revision: 76
+Author: kh_naba
+Date: 15:07:23, 06 June, 2009
+Message:
+Updated readme to flash modified firmware.
+----
+Modified : /README
+
+Revision: 75
+Author: kh_naba
+Date: 12:48:50, 06 June, 2009
+Message:
+Added example vehicle.
+----
+Added : /Example.nxc (Copy from path: /Rover.nxc, Revision, 74)
+Deleted : /Rover.nxc
+
+Revision: 74
+Author: kh_naba
+Date: 15:37:40, 02 May, 2009
+Message:
+Fixed rover implementation
+----
+Modified : /Rover.nxc
+
+Revision: 73
+Author: kh_naba
+Date: 15:28:23, 02 May, 2009
+Message:
+Stops and Starts vehicle directly in VehiclePause() and VehicleContinue() calls.
+----
+Modified : /Vehicle.nxc
+
+Revision: 72
+Author: kh_naba
+Date: 15:25:42, 02 May, 2009
+Message:
+Uses Angle functions to handle angle arithmetics. Added sensorOffset parameter to offset sensor mount from the mount point. Implemented SonarGetPosition(), SonarGetObjectDistanceAtLocation() and SonarTriangulateLandmarks(). Added more tests.
+----
+Modified : /Sonar.nxc
+
+Revision: 71
+Author: kh_naba
+Date: 15:16:51, 02 May, 2009
+Message:
+Fixed CircleIntersectCircle()
+----
+Modified : /Circle.nxc
+
+Revision: 70
+Author: kh_naba
+Date: 15:15:26, 02 May, 2009
+Message:
+Fixed map functions and added more tests
+----
+Modified : /Map.nxc
+
+Revision: 69
+Author: kh_naba
+Date: 15:09:32, 02 May, 2009
+Message:
+Added screen text and number printing (with auto scroll). Added documentation. Added tests.
+----
+Modified : /Screen.nxc
+
+Revision: 68
+Author: kh_naba
+Date: 21:21:20, 27 April, 2009
+Message:
+Separated vehicle part into another class
+----
+Modified : /Rover.nxc
+
+Revision: 67
+Author: kh_naba
+Date: 21:20:44, 27 April, 2009
+Message:
+Use cm for test map
+----
+Modified : /Map.nxc
+
+Revision: 66
+Author: kh_naba
+Date: 18:51:55, 27 April, 2009
+Message:
+Fixed a few test parameters for vehicle
+----
+Modified : /RobotPrima.nxc
+Modified : /Vehicle.nxc
+
+Revision: 65
+Author: kh_naba
+Date: 01:03:39, 26 April, 2009
+Message:
+Implemented carrot following algorithm for vehicle path following to navigate a set of points, and uses inversion function for power and steering to control both during navigation. Introduced helper functions to set vehicle parameters. Added documentation for all functions.
+----
+Modified : /Vehicle.nxc
+
+Revision: 64
+Author: kh_naba
+Date: 01:00:43, 26 April, 2009
+Message:
+New screen funtions. Plotter currently implemented.
+----
+Added : /Screen.nxc
+
+Revision: 63
+Author: kh_naba
+Date: 00:59:25, 26 April, 2009
+Message:
+Introduced MotorSetTurnRatioPower() to set both turn ratio and power together.Fixed MotorRotateAngleDiff() to use MotorSetTurnRatioPower(). Use plotter to draw graph.
+----
+Modified : /Motor.nxc
+
+Revision: 62
+Author: kh_naba
+Date: 00:44:46, 26 April, 2009
+Message:
+Comment fix
+----
+Modified : /Odometer2.nxc
+
+Revision: 61
+Author: kh_naba
+Date: 00:21:25, 26 April, 2009
+Message:
+Fixes VectorGetAngleVec() to work correctly. Reduce or scale only x and y components in VectorScale() and VectorReduce() -- theta is unchanged when vector is scaled or reduced.
+----
+Modified : /Vector.nxc
+
+Revision: 60
+Author: kh_naba
+Date: 22:55:47, 25 April, 2009
+Message:
+Added comments
+----
+Modified : /Circle.nxc
+
+Revision: 59
+Author: kh_naba
+Date: 11:50:10, 25 April, 2009
+Message:
+Added CircleIntersectLine() to determine points of intersection between a line and a circle. Also added test suit for circle geometry.
+----
+Modified : /Circle.nxc
+
+Revision: 58
+Author: kh_naba
+Date: 11:48:34, 25 April, 2009
+Message:
+Fixed VectorGetDistanceVec() and VectorGetDistance()
+----
+Modified : /Vector.nxc
+
+Revision: 57
+Author: kh_naba
+Date: 11:47:33, 25 April, 2009
+Message:
+Added Integral limit to prevent integral windup
+----
+Modified : /PID.nxc
+
+Revision: 56
+Author: kh_naba
+Date: 01:35:31, 16 April, 2009
+Message:
+Updated
+----
+Modified : /README
+
+Revision: 55
+Author: kh_naba
+Date: 01:30:47, 16 April, 2009
+Message:
+Updated.
+----
+Modified : /README
+
+Revision: 54
+Author: kh_naba
+Date: 01:16:19, 16 April, 2009
+Message:
+Added documentation and updated existing documentation.
+----
+Modified : /AlphaRexPlus.nxc
+Modified : /CaliberateMotors.nxc
+Modified : /FiltersTest.nxc
+Modified : /LowPassFilter.nxc
+Modified : /Map.nxc
+Modified : /RobotPrima.nxc
+Modified : /Sampler.nxc
+Modified : /Vehicle.nxc
+
+Revision: 53
+Author: kh_naba
+Date: 00:00:29, 16 April, 2009
+Message:
+Angle.nxc: Fixed documentation.
+Map.nxc: Added ENABLE_TEST defines
+Vehicle.nxc: New 2 wheels drive vehicle implementation.
+----
+Modified : /Angle.nxc
+Modified : /Map.nxc
+Added : /Vehicle.nxc
+
+Revision: 52
+Author: kh_naba
+Date: 22:54:19, 13 April, 2009
+Message:
+Added active rover steering and fixed navigation.
+----
+Modified : /Rover.nxc
+
+Revision: 51
+Author: kh_naba
+Date: 21:28:36, 13 April, 2009
+Message:
+Implemented angles utility functions.
+----
+Added : /Angle.nxc
+
+Revision: 50
+Author: kh_naba
+Date: 15:24:49, 13 April, 2009
+Message:
+Fixes my test robot wheel diameter and axial length.
+----
+Modified : /RobotPrima.nxc
+
+Revision: 49
+Author: kh_naba
+Date: 15:24:00, 13 April, 2009
+Message:
+New test points.
+----
+Modified : /KalmanFilter.nxc
+
+Revision: 48
+Author: kh_naba
+Date: 15:23:10, 13 April, 2009
+Message:
+Added MotorRotateAngleDiff() to rotate pair of motors differentially.
+----
+Modified : /Motor.nxc
+
+Revision: 47
+Author: kh_naba
+Date: 15:21:35, 13 April, 2009
+Message:
+Fixes typo from "cummulative" to "cumulative"
+----
+Modified : /Odometer2.nxc
+
+Revision: 46
+Author: kh_naba
+Date: 15:18:25, 13 April, 2009
+Message:
+Fixes cumulative theta wrap around towards negative value.
+----
+Modified : /Odometer2.nxc
+
+Revision: 45
+Author: kh_naba
+Date: 15:17:08, 13 April, 2009
+Message:
+Fixes precision loss by downscaling integer values at different place, and fixes test plot funtion to not draw the first line. Thanks to Daniele Benedettelli (of mindstorms nxt rubic cube solver fame) for providing the patch. Fixes my test robot wheel diameter and axial length. Adds missing odometer step function call to the test function.
+----
+Modified : /Odometer2.nxc
+
+Revision: 44
+Author: kh_naba
+Date: 00:29:16, 15 September, 2008
+Message:
+Added sonar functions SonarGetObjectDistanceAtAngle(), SonarGetObjectDistanceAtLocation() and SonarTriangulateLandmarks() for triangulating robot location using intersecting circles. Uses prima robot definition. Added defines for test functions. Fixed Rover.nxc to use new sonar triangulation functions (untested).
+----
+Modified : /Rover.nxc
+Modified : /Sonar.nxc
+
+Revision: 43
+Author: kh_naba
+Date: 00:17:51, 15 September, 2008
+Message:
+Added #endif comment
+----
+Modified : /Vector.nxc
+
+Revision: 42
+Author: kh_naba
+Date: 00:16:50, 15 September, 2008
+Message:
+Fixed typo.
+----
+Modified : /Odometer2.nxc
+
+Revision: 41
+Author: kh_naba
+Date: 00:16:25, 15 September, 2008
+Message:
+Fixed build when test is enabled.
+----
+Modified : /RandomNorm.nxc
+
+Revision: 40
+Author: kh_naba
+Date: 00:00:31, 15 September, 2008
+Message:
+Added header defines and commented test main()
+----
+Modified : /RandomNorm.nxc
+
+Revision: 39
+Author: kh_naba
+Date: 23:34:52, 14 September, 2008
+Message:
+Added function VectorGetAngleVec() to find angle made by two vectors.
+----
+Modified : /Vector.nxc
+
+Revision: 38
+Author: kh_naba
+Date: 23:32:51, 14 September, 2008
+Message:
+Fixed docs.
+----
+Modified : /Circle.nxc
+
+Revision: 37
+Author: kh_naba
+Date: 16:01:34, 14 September, 2008
+Message:
+Added Circle.nxc to hold circle geometry functions.
+----
+Added : /Circle.nxc
+
+Revision: 36
+Author: kh_naba
+Date: 15:53:58, 14 September, 2008
+Message:
+Added a function to computer distance between two vectors. Fixed typos.
+----
+Modified : /Vector.nxc
+
+Revision: 35
+Author: kh_naba
+Date: 00:56:45, 14 September, 2008
+Message:
+Added RandomNorm2() and RandomNorm3() that determines normal random number by computation. Also added a test function. Thanks to Daniele Benedettelli for the patch.
+----
+Modified : /RandomNorm.nxc
+
+Revision: 34
+Author: kh_naba
+Date: 00:08:59, 14 September, 2008
+Message:
+Added documentation for SonarSweep() and SonarSweepPrint(). Moved getter functions on the top.
+----
+Modified : /Sonar.nxc
+
+Revision: 33
+Author: kh_naba
+Date: 23:48:49, 13 September, 2008
+Message:
+Take into account gear ratio.
+----
+Modified : /Odometer2.nxc
+
+Revision: 32
+Author: kh_naba
+Date: 19:15:28, 13 September, 2008
+Message:
+Added stub for landmarks triangulation.
+----
+Modified : /Sonar.nxc
+
+Revision: 31
+Author: kh_naba
+Date: 13:33:53, 13 September, 2008
+Message:
+Fixed synced motors functions. Added a new function to rotate synced motors.
+----
+Modified : /Motor.nxc
+
+Revision: 30
+Author: kh_naba
+Date: 12:42:08, 13 September, 2008
+Message:
+Added robot definition for the test robot 'Prima'. Used to test many of the implementations.
+----
+Added : /RobotPrima.nxc
+
+Revision: 29
+Author: kh_naba
+Date: 12:41:07, 13 September, 2008
+Message:
+Use abstracted motor functions for synced motors controls. Disable localization for now. Test function to move Prima in a square path.
+----
+Modified : /Rover.nxc
+
+Revision: 28
+Author: kh_naba
+Date: 12:39:47, 13 September, 2008
+Message:
+Added triangulation landmarks retrieval function.
+----
+Modified : /Map.nxc
+
+Revision: 27
+Author: kh_naba
+Date: 12:39:13, 13 September, 2008
+Message:
+Fixed synced motor funtions
+----
+Modified : /Motor.nxc
+
+Revision: 26
+Author: kh_naba
+Date: 12:01:55, 13 September, 2008
+Message:
+Added link to my blog
+----
+Modified : /README
+
+Revision: 25
+Author: kh_naba
+Date: 11:36:01, 31 August, 2008
+Message:
+Updated rover navigation
+----
+Modified : /Rover.nxc
+
+Revision: 24
+Author: kh_naba
+Date: 11:31:42, 31 August, 2008
+Message:
+Added synchronous motor functions and updated docs.
+----
+Modified : /Motor.nxc
+
+Revision: 23
+Author: kh_naba
+Date: 10:56:03, 31 August, 2008
+Message:
+Added sonar sweep method. Added test function.
+----
+Modified : /Sonar.nxc
+
+Revision: 22
+Author: kh_naba
+Date: 10:54:41, 31 August, 2008
+Message:
+Added test conditional build
+----
+Modified : /KalmanFilter.nxc
+
+Revision: 21
+Author: kh_naba
+Date: 10:53:39, 31 August, 2008
+Message:
+Used step function instead of parallel task for odometry updates. This leaves the task management to upper classes. Updated API docs.
+----
+Modified : /Odometer2.nxc
+
+Revision: 20
+Author: kh_naba
+Date: 10:51:43, 31 August, 2008
+Message:
+Added debug and test conditionals
+----
+Modified : /Matrix.nxc
+
+Revision: 19
+Author: kh_naba
+Date: 03:05:16, 20 August, 2008
+Message:
+
+----
+Modified : /CaliberateMotors.nxc
+Added : /Motor.nxc
+
+Revision: 18
+Author: kh_naba
+Date: 03:03:15, 20 August, 2008
+Message:
+An implementation of generic PID controller
+----
+Modified : /PID.nxc
+
+Revision: 17
+Author: kh_naba
+Date: 03:02:14, 20 August, 2008
+Message:
+More maps implementation. Added methods to find objects in given range of angles.
+----
+Modified : /Map.nxc
+
+Revision: 16
+Author: kh_naba
+Date: 00:34:59, 20 August, 2008
+Message:
+Added new methods VectorGetDistance(), VectorGetAngle(), VectorInitPolar(), VectorInitBound() and VectorTranslate(). Updated documentation.
+----
+Modified : /Vector.nxc
+
+Revision: 15
+Author: kh_naba
+Date: 00:29:45, 20 August, 2008
+Message:
+Improved sonar implementation and fixed object location computation.
+----
+Modified : /Sonar.nxc
+
+Revision: 14
+Author: kh_naba
+Date: 00:21:45, 13 August, 2008
+Message:
+Rewrote odometry equations to a more efficient ones and got rid of rotation angle and rotation radius based odometry. Fixed cummulation error due to bug in unitary operators with NXC (now I try to avoid it all the time). Introduced enabling/disabling dx and delta tracking, as the performance requirement would be. Added simple P-controller for Rover to navigate through a series of navigation points.
+----
+Modified : /Odometer2.nxc
+Modified : /Rover.nxc
+
+Revision: 13
+Author: kh_naba
+Date: 00:17:19, 13 August, 2008
+Message:
+Added include protection and renamed main() to TestPID() method. Fixed function names to follow style.
+----
+Modified : /PID.nxc
+
+Revision: 12
+Author: kh_naba
+Date: 00:16:02, 13 August, 2008
+Message:
+Added vector print method and rearranged equations.
+----
+Modified : /Vector.nxc
+
+Revision: 11
+Author: kh_naba
+Date: 22:20:09, 12 August, 2008
+Message:
+Improvements to odometry.
+----
+Modified : /Odometer2.nxc
+
+Revision: 10
+Author: kh_naba
+Date: 21:36:16, 11 August, 2008
+Message:
+Fixed dx theta component.
+----
+Modified : /Odometer2.nxc
+
+Revision: 9
+Author: kh_naba
+Date: 01:56:46, 09 August, 2008
+Message:
+Renamed project to libnexter because of an already existing project libnxt. Fixed docs. Added header protection macros. Added Rover initialization routines. Added docs for Sonar.
+----
+Modified : /Doxyfile
+Modified : /KalmanFilter.nxc
+Modified : /Matrix.nxc
+Modified : /Odometer2.nxc
+Modified : /README
+Modified : /Rover.nxc
+Modified : /Sonar.nxc
+
+Revision: 8
+Author: kh_naba
+Date: 20:34:46, 03 August, 2008
+Message:
+Renamed RobotModel.nxc to Rover.nxc
+----
+Deleted : /RobotModel.nxc
+Added : /Rover.nxc (Copy from path: /RobotModel.nxc, Revision, 1)
+
+Revision: 7
+Author: kh_naba
+Date: 20:19:30, 03 August, 2008
+Message:
+Renamed Robot2Wheels.nxc to Odometer2.nxc. Fixed vector operations parameters.
+----
+Added : /Odometer2.nxc (Copy from path: /Robot2Wheels.nxc, Revision, 3)
+Deleted : /Robot2Wheels.nxc
+Modified : /Vector.nxc
+
+Revision: 6
+Author: kh_naba
+Date: 17:40:23, 03 August, 2008
+Message:
+Updated documentation
+----
+Modified : /Doxyfile
+Modified : /HighPassFilter.nxc
+Modified : /KalmanFilter.nxc
+Modified : /PID.nxc
+Modified : /README
+
+Revision: 5
+Author: kh_naba
+Date: 00:05:16, 31 July, 2008
+Message:
+Added doxygen file for generating documentation. Updated README and API documentation. Created a separate file for random number function.
+----
+Modified : /Debug.nxc
+Added : /Doxyfile
+Modified : /HighPassFilter.nxc
+Modified : /KalmanFilter.nxc
+Added : /README
+Added : /RandomNorm.nxc
+Modified : /Vector.nxc
+
+Revision: 4
+Author: kh_naba
+Date: 23:40:44, 28 July, 2008
+Message:
+Added API documentation
+----
+Modified : /Debug.nxc
+Modified : /Matrix.nxc
+
+Revision: 3
+Author: kh_naba
+Date: 23:40:00, 28 July, 2008
+Message:
+Added rotation support in vector and completed 2 wheels drive model.
+----
+Modified : /Robot2Wheels.nxc
+
+Revision: 2
+Author: kh_naba
+Date: 22:13:06, 27 July, 2008
+Message:
+Added rotation support in vector and completed 2 wheels drive model.
+----
+Modified : /Robot2Wheels.nxc
+Modified : /Vector.nxc
+
+Revision: 1
+Author: kh_naba
+Date: 16:11:20, 27 July, 2008
+Message:
+Initial import
+----
+Added : /AlphaRexPlus.nxc
+Added : /CaliberateMotors.nxc
+Added : /Debug.nxc
+Added : /FiltersTest.nxc
+Added : /HighPassFilter.nxc
+Added : /KalmanFilter.nxc
+Added : /LowPassFilter.nxc
+Added : /Map.nxc
+Added : /Matrix.nxc
+Added : /PID.nxc
+Added : /Robot2Wheels.nxc
+Added : /RobotModel.nxc
+Added : /Sampler.nxc
+Added : /Sonar.nxc
+Added : /Vector.nxc
+

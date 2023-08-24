@@ -1,0 +1,31 @@
+
+#include "algorithm.nxc"
+#include "console.nxc"
+
+
+// Ex2
+// find multiple maximums (or minimums)
+task main()
+{
+   initConsole();
+
+   int myArray[] = {4, 3, 2, 4, 1, -1, 4, 0};
+
+   // this empty array will hold our "maximum positions"
+   int max_pos[];
+
+   cout("Find Maximums");
+   int max_count = arrayMaxPosEx(myArray, max_pos);
+
+   // the max is the number at the position max_pos[0]
+   // remember: arrayMaxPosEx gives you only the positions!
+   coutF("Max = %.0f", myArray[ max_pos[0] ]);
+   coutF("Found %.0f of Max", max_count);
+
+   for(int i; i < max_count; ++i) {
+      coutF("Max at pos: %.0f", max_pos[i]);
+   }
+
+   until( kbhit() );
+}
+

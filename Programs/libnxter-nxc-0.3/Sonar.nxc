@@ -1,0 +1,779 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Sonar.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#ifndef _SONAR_H_
+#define _SONAR_H_
+
+#include "CaliberateMotors.nxc"
+#include "Circle.nxc"
+
+/**
+ * \file Sonar.nxc
+ * \brief Sonar implementation with an ultrasonic sensor, optionally mounted
+ * on a sweep motor.
+ */
+
+#include "Angle.nxc"
+#include "Vector.nxc"
+#include "PID.nxc"
+#include "Motor.nxc"
+
+/**
+ * \brief Sonar class that represents an ultrasonic sensor mounted on a robot
+ */
+struct Sonar
+{
+    int sensorPort;         /**< Port where ultrasonic sensor is mounted */
+    Vector sensorLocation;  /**< Location of sensor mount with respect to robot reference */
+    int sensorOffset;       /**< Offset of sensor 'zero reading' from the mount point (in mm) */
+    
+    /* Thresholds */
+    int sensorCutOffMin;    /**< Cut off distance beyond which object is not detected */
+    int sensorCutOffMax;    /**< Cut off distance below which object is not detected */
+    int toleranceAngle;     /**< When finding an object, +/- angle around which object is considered found */
+    long toleranceDistance; /**< When finding an object, +/- distance around which object is considered found */
+
+    /* Sensor motor on which it is mounted */
+    int sensorMotor;        /**< Motor that controls sensor's rotation */
+    int gearRatio;          /**< Output (sonar rotation) to Input (tacho counts) gear ratio scaled by 100 */
+    int sensorMinAngle;     /**< Minimum sensor motor angle to rotate */
+    int sensorMaxAngle;     /**< Maximum sensor motor angle to rotate */
+    int motorMovePower;     /**< Power for rotating the motor during positioning: 0 - 100 */
+    int motorScanPower;     /**< Power for rotating the motor during scaning: 0 - 100 */
+
+    /* Current orientation of sensor motor relative to it's rest position */
+    int currentViewAngle;   /**< Current View angle of the sonar */
+    long neutralTachoCount; /**< Tacho count of the motor at neutral state */
+    PIDControl pidControl;  /**< PID controller used for sensor motor positioning */
+    
+};
+
+/**
+ * \brief Initializes sonar with an ultrasonic sensor connected at sensorPort
+ * and mounted on a motor sensorMotor.
+ *
+ * sensorMotor can be 0, which means the sensor is
+ * assumed to be not mounted on a motor. The sensor mount is placed on the robot at
+ * a relative offset sensorLocation from the robot's reference point.
+ * sensorOffset is the offset distance of sensor 'reading zero' from the mount.
+ * gearRatio is the Input to Ouput gear ration of the sensor motor scaled by
+ * 100. i.e. For 1:2 ratio = 50, 1:1 = 100, -2:1 = -200 etc.
+ * sensorMinAngle and sensorMaxAngle are the min and max angles between
+ * which sensor motor is allowed to rotate (only applicable if sensorMotor is
+ * specifiec. Reference angle '0' is the current state of motor. sensorMinAngle
+ * sensorMaxAngle are therefore relative to this. So, make sure to align the
+ * sensor motor to what would be the neutral position of the radar before
+ * calling this init funtion. Use MotorCaliberate() function to auto align it,
+ * for example. sensorCutOffMin and sensorCutOffMax are the mininum and maximum
+ * distance for an object to be detected.
+ */
+void SonarInit(Sonar &sonar, int sensorPort,
+               Vector &sensorLocation, int sensorOffset,
+               int sensorCutOffMin, int sensorCutOffMax,
+               int toleranceAngle, long toleranceDistance,
+               int sensorMotor, int gearRatio,
+               int motorMovePower, int motorScanPower,
+               int sensorMinAngle, int sensorMaxAngle)
+{
+    sonar.sensorPort = sensorPort;
+    sonar.sensorMotor = sensorMotor;
+    sonar.gearRatio = gearRatio;
+    sonar.sensorMinAngle = sensorMinAngle;
+    sonar.sensorMaxAngle = sensorMaxAngle;
+    sonar.sensorCutOffMin = sensorCutOffMin;
+    sonar.sensorCutOffMax = sensorCutOffMax;
+    sonar.sensorLocation = sensorLocation;
+    sonar.sensorOffset = sensorOffset;
+    sonar.toleranceAngle = toleranceAngle;
+    sonar.toleranceDistance = toleranceDistance;
+    sonar.motorMovePower = motorMovePower;
+    sonar.motorScanPower = motorScanPower;
+    sonar.currentViewAngle = 0;
+    sonar.neutralTachoCount = GetOutput(sonar.sensorMotor, TachoCount);
+    PIDControlInit(sonar.pidControl,
+                   1000,     /* PID scale */
+                   450,      /* P value */
+                   0,        /* I value */
+                   0,        /* D value */
+                   5,        /* Steady state counts threshold */
+                   2,        /* Output gain */
+                   motorMovePower);   /* Output absolute maximum */
+
+}
+
+/**
+ * \brief Gets current absolute view angle in the world at given robot
+ * orientation.
+ */
+int SonarGetCurrentViewAngle(Sonar &sonar, Vector &robotLocation)
+{
+    int absoluteAngle;
+
+    absoluteAngle = sonar.currentViewAngle;
+    absoluteAngle = AngleAbsAdd(absoluteAngle, sonar.sensorLocation.theta);
+    absoluteAngle = AngleAbsAdd(absoluteAngle, robotLocation.theta);
+    return absoluteAngle;
+}
+
+/**
+ * \brief Gets the absolute minimum view angle in the world at given robot
+ * orientation.
+ */
+int SonarGetMinViewAngle(Sonar &sonar, Vector &robotLocation)
+{
+    int absoluteAngle;
+
+    absoluteAngle = AngleRelToAbs(sonar.sensorMinAngle);
+    absoluteAngle = AngleAbsAdd(absoluteAngle, sonar.sensorLocation.theta);
+    absoluteAngle = AngleAbsAdd(absoluteAngle, robotLocation.theta);
+    return absoluteAngle;
+}
+
+/**
+ * \brief Gets the absolute maximum view angle in the world at given robot
+ * orientation.
+ */
+int SonarGetMaxViewAngle(Sonar &sonar, Vector &robotLocation)
+{
+    int absoluteAngle;
+
+    absoluteAngle = AngleRelToAbs(sonar.sensorMaxAngle);
+    absoluteAngle = AngleAbsAdd(absoluteAngle, sonar.sensorLocation.theta);
+    absoluteAngle = AngleAbsAdd(absoluteAngle, robotLocation.theta);
+    return absoluteAngle;
+}
+
+/**
+ * \brief Gets the current sonar mount position and orientation in world coordinate.
+ */
+void SonarGetPosition(Sonar &sonar, Vector &robotLocation, Vector &retVec)
+{
+    /* Orient sonar to robot orientation */
+    retVec = sonar.sensorLocation;
+    VectorRotate(retVec, robotLocation.theta);
+    VectorAdd(retVec, robotLocation);
+    retVec.theta = robotLocation.theta + sonar.sensorLocation.theta;
+}
+
+/**
+ * \brief Sweeps the sonar from angleFrom to angleTo and returns an array of
+ * angle/distance pairs.
+ *
+ * The angle angleFrom and angleTo are relative to sonar
+ * neutral position, zero being the neutral position. Returned array rangeData
+ * is a one dimentional integer array with angle and sense distance
+ * alternatingly filled. Some angles may not have any reading at all, either
+ * because nothing was sensed within the range of sensorCutOffMin and
+ * sensorCutOffMax, or a reading was not performed at that angle (motor sweeping
+ * pass it before making a reading). In that case, the readings will contain
+ * -1. An example return rangeData for a sweep of -10 to 10 is: [-10, -1, -9
+ * -1, -8, 43, -7, 43, -6, 42, -5, -1, -4, -1 ...]
+ */
+bool SonarSweep(Sonar &sonar, int angleFrom, int angleTo, long &rangeData[])
+{
+     int samplingPeriod = 20; /* msec */
+     long motorTacho, output, lastError, tachoFrom, tachoTo;
+     long senseDistance;
+     int lastViewAngle, senseAngle, dataSize, dataIndex;
+     int i;
+     
+     /* Run the motor. Speed is evaluated later during positioning */
+     MotorStart(sonar.sensorMotor, 0);
+
+     lastViewAngle = sonar.currentViewAngle;
+
+     dataSize = ((Abs(angleTo - angleFrom) + 1) * 2);
+     ArrayInit(rangeData, 0, dataSize);
+     
+     /* Initialize rangeData array with angles and unread values (-1) */
+     if (angleTo > angleFrom)
+     {
+         dataIndex = 0;
+         for (i = angleFrom; i <= angleTo; i++)
+         {
+             rangeData[dataIndex] = i;
+             dataIndex = dataIndex + 1;
+             rangeData[dataIndex] = -1;
+             dataIndex = dataIndex + 1;
+         }
+     }
+     else
+     {
+         dataIndex = 0;
+         for (i = angleFrom; i >= angleTo; i--)
+         {
+             rangeData[dataIndex] = i;
+             dataIndex = dataIndex + 1;
+             rangeData[dataIndex] = -1;
+             dataIndex = dataIndex + 1;
+         }
+     }
+     
+     tachoFrom = ((angleFrom - sonar.currentViewAngle) * sonar.gearRatio)/100;
+     tachoTo = ((angleTo - sonar.currentViewAngle) * sonar.gearRatio)/100;
+
+     /* Find the closest point either 'From' and 'To' angles from current angle,
+      * to start scanning
+      */
+     if (Abs((lastViewAngle - angleFrom)) > Abs((lastViewAngle - angleTo)))
+     {
+         long tmp;
+         tmp = tachoFrom;
+         tachoTo = tachoFrom;
+         tachoFrom = tmp;
+     }
+
+     /* Move to the closest point */
+     sonar.pidControl.absMaxOutput = sonar.motorMovePower;
+     PIDControlSetPoint(sonar.pidControl, tachoFrom);
+     while(!PIDControlCheckEnd(sonar.pidControl))
+     {
+         motorTacho = GetOutput(sonar.sensorMotor, BlockTachoCount);
+         senseAngle = ((motorTacho * 100)/sonar.gearRatio);
+         sonar.currentViewAngle = lastViewAngle + senseAngle;
+         output = PIDControlStep(sonar.pidControl, motorTacho);
+         MotorSetPower(sonar.sensorMotor, output);
+         Wait(samplingPeriod);
+     }
+     
+     /* Rotate to the 'to' angle and at the same time take sonar readings
+      * and fill up the rangeData array
+      */
+     sonar.pidControl.absMaxOutput = sonar.motorScanPower;
+     PIDControlSetPoint(sonar.pidControl, tachoTo);
+     while(!PIDControlCheckEnd(sonar.pidControl))
+     {
+         motorTacho = GetOutput(sonar.sensorMotor, BlockTachoCount);
+
+         /* Read sensor */
+         senseAngle = ((motorTacho * 100)/sonar.gearRatio);
+         sonar.currentViewAngle = lastViewAngle + senseAngle;
+         senseDistance = SensorUS(sonar.sensorPort);      /* cm */
+         senseDistance = senseDistance * 10;              /* mm */
+         senseDistance += sonar.sensorOffset; /* Reading should be from mount */
+         dataIndex = 2 * Abs(sonar.currentViewAngle - angleFrom);
+         if (dataIndex >= 0 && dataIndex < dataSize)
+         {
+             if ((senseDistance >= sonar.sensorCutOffMin) &&
+                 (senseDistance <= sonar.sensorCutOffMax))
+             {
+                 rangeData[dataIndex] = sonar.currentViewAngle;
+                 rangeData[(dataIndex + 1)] = senseDistance;
+             }
+         }
+         /* Adjust output */
+         output = PIDControlStep(sonar.pidControl, motorTacho);
+         MotorSetPower(sonar.sensorMotor, output);
+         Wait(samplingPeriod);
+     }
+     MotorStop(sonar.sensorMotor);
+}
+
+/**
+ * \brief Prints the rangeData array on screen like a radar. Used for
+ * debugging.
+ *
+ * This function prints the returned scan data from SonarSweep() on to
+ * screen. The center bottom of the screen is the sonar location and
+ * the vertical line is the neutral orientation. So it can display
+ * readings made from -90 to +90 degrees. Readings are indicated with small
+ * circles on the screen. Radial distances are appropriately scalled to fit
+ * on the screen.
+ */
+void SonarSweepPrint(Sonar &sonar, long &rangeData[], int waitTime)
+{
+    int arrLen = ArrayLen(rangeData);
+    /*
+    for (int i = 0; i < arrLen; i++)
+    {
+        int x = (i/8) * 40;
+        int y = (i % 8) * 8;
+        NumOut(x, y, rangeData[i], true);
+    }
+    Wait(waitTime);
+    */
+    ClearScreen();
+    for (int i = 0; i < ArrayLen(rangeData); i++)
+    {
+        int theta = 90 + rangeData[i];
+        i = i + 1;
+        int d = rangeData[i]/5;
+        int x = (d * Cos(theta)) / 100;
+        int y = (d * Sin(theta)) / 100;
+        if (d > 0)
+            CircleOut(x + 50, y, 2, false);
+    }
+    Wait(waitTime);
+}
+
+/**
+ * \brief Returns the distance of an object expected to be found at the given
+ * viewAngle (relative to sonar neutral position) and viewDistance.
+ *
+ * Sonar will take a short sweep around the given viewAngle (+/- toleranceAngle)
+ * and if an object is found within +/- toleranceDisance, it's most likely
+ * distance from sonar's reference point will be returned. The angle
+ * is relative to the neutral position of the sonar (not the robot).
+ * Left (anticlockwwise) is positive and Right (clockwise) is negative.
+ */
+bool SonarGetObjectDistanceAtAngle(Sonar &sonar, Vector robotLocation,
+                                   int viewAngle, long viewDistance,
+                                   int &retBestAngle, long &retBestDistance)
+{
+    Vector returnObject;
+    int angleFrom, angleTo, i;
+    long minima;
+    long rangeData[];
+    bool found;
+
+    if ((viewAngle < sonar.sensorMinAngle) || (viewAngle > sonar.sensorMaxAngle))
+        return false;
+
+    angleFrom = viewAngle - (sonar.toleranceAngle/2);
+    angleTo = viewAngle + (sonar.toleranceAngle/2);
+
+    SonarSweep(sonar, angleFrom, angleTo, rangeData);
+    /* SonarSweepPrint(sonar, rangeData, 2000); */
+
+    /* Find the closest reading to the expected distance */
+    minima = 1000000;
+    for (i = 0; i < ArrayLen(rangeData); i = i + 2)
+    {
+        int dist = rangeData[i+1];
+        if (dist > 0 && Abs(dist - viewDistance) < minima)
+        {
+            retBestDistance = dist;
+            retBestAngle = rangeData[i];
+            minima = Abs(retBestDistance - viewDistance);
+            found = true;
+        }
+    }
+    return found;
+}
+
+/**
+ * \brief Returns the distance of an object expected to be found at the given
+ * viewLocation (in world coordinate).
+ *
+ * Sonar will take a short sweep around the given viewLocation (+/- toleranceAngle)
+ * and if an object is found within +/- toleranceDisance, its most likely
+ * distance from the robot's reference point will be returned. The angle
+ * viewLocation is located in world coordinate system. Note also that the
+ * returned distance is distance of the object from the robot reference point,
+ * not sonar reference point as in SonarGetObjectDistanceAtAngle().
+ * Left (anticlockwwise) is positive and Right (clockwise) is negative.
+ */
+bool SonarGetObjectDistanceAtLocation(Sonar &sonar, Vector robotLocation,
+                                      Vector &viewLocation, int &retBestAngle,
+                                      long &retBestDistance)
+{
+    Vector sonarLocationWorld, returnObject, objectError;
+    int viewAngle, bestAngle;
+    long viewDistance, bestDistance;
+    long distance;
+    bool found;
+    
+    /* Sonar location in world */
+    SonarGetPosition(sonar, robotLocation, sonarLocationWorld);
+
+    /* Absolute view angle in the world - 0 to 360 */
+    viewAngle = VectorGetAngleVec(sonarLocationWorld, viewLocation);
+    /* View angle relative to sensor orientation */
+    viewAngle = AngleAbsSub(viewAngle, sonarLocationWorld.theta);
+    /* Relative view angle - -180 to +180 */
+    viewAngle = AngleAbsToRel(viewAngle);
+
+    viewDistance = VectorGetDistanceVec(sonarLocationWorld, viewLocation);
+
+    /* Find object at the relative view angle */
+    found = SonarGetObjectDistanceAtAngle(sonar, robotLocation,
+                                          viewAngle, viewDistance,
+                                          bestAngle, bestDistance);
+    if (found)
+    {
+        retBestAngle = bestAngle;
+        retBestDistance = bestDistance;
+    }
+    return found;
+}
+
+/**
+ * \brief Triangulates the position robot from two known landmarks.
+ *
+ * Sonar makes distance and angle readings of given two landmarks and
+ * triangulates the position of robot. Triangulation is performed by
+ * intersecting the two circles formed by the two landmarks having radiuses of
+ * their respective distances measured by sonar. One of the two
+ * intersection points is the triangulated location of robot. The one
+ * closer to current location is considered more likly candidate and is
+ * returned.
+ */
+bool SonarTriangulateLandmarks(Sonar &sonar, Vector &robotLocation,
+                               Vector &landmark1, Vector &landmark2,
+                               Vector &retLocation)
+{
+    bool found, intersect;
+    long d1, d2;
+    int angle1, angle2;
+    Vector sonarLocation, intersect1, intersect2;
+
+    found = SonarGetObjectDistanceAtLocation(sonar, robotLocation, landmark1,
+                                             angle1, d1);
+    if (found == false)
+        return false;
+
+    found = SonarGetObjectDistanceAtLocation(sonar, robotLocation, landmark2,
+                                             angle2, d2);
+    if (found == false)
+        return false;
+
+    intersect = CircleIntersectCircle(landmark1, d1, landmark2, d2,
+                                      intersect1, intersect2);
+    if (intersect == false)
+        return false;
+
+    /* Sonar location in world coordinate */
+    SonarGetPosition(sonar, robotLocation, sonarLocation);
+
+    d1 = VectorGetDistanceVec(sonarLocation, intersect1);
+    d2 = VectorGetDistanceVec(sonarLocation, intersect2);
+    
+    /* retLoation, currently triangulated position of the sonar, is one
+     * closest to the current sonar position.
+     */
+    if (d1 > d2)
+        retLocation = intersect2;
+    else
+        retLocation = intersect1;
+
+    sonarLocation = sonar.sensorLocation;
+    VectorRotate(sonarLocation, retLocation.theta);
+    VectorSubtract(retLocation, sonarLocation);
+
+    /* Fixing robot orientation */
+    /* Theta set to sonar angle (in world coordinate) */
+    retLocation.theta = VectorGetAngleVec(retLocation, landmark2);
+    
+    /* Theta set to robot orientation by removing sonar angle at the time
+     * of landmark2 observation.
+     */
+    retLocation.theta = AngleAbsSub(retLocation.theta, angle2);
+
+    return true;
+}
+
+/**
+ * \brief Returns the absolute location of an object in the world detected
+ * by the sonar at current angle, if any was detected within the range
+ * of sensorCutOffMin and sensorCutOffMax.
+ *
+ * The object is located in robot world coordinate.
+ * retObject is the reference to Vector where object's coordinates will be
+ * be stored. It returns true if an object was found within the cutoff
+ * and refObject is updated, otherwise returns false and refObject is
+ * untouched.
+ *
+ * robotLocation is the location of robot's point of reference in
+ * in the robot world coordinate.
+ */
+bool SonarFindObject(Sonar &sonar, Vector robotLocation, Vector &retObject)
+{
+    long senseDistance = SensorUS(sonar.sensorPort); /* cm */
+    senseDistance = senseDistance * 10;              /* mm */
+    senseDistance += sonar.sensorOffset; /* Reading from sensor mount point */
+    if ((senseDistance >= sonar.sensorCutOffMin) &&
+        (senseDistance <= sonar.sensorCutOffMax))
+    {
+        /* Translate position to robot location */
+        Vector retObject = robotLocation;
+        //VectorPrint(retObject, "robotLocation", 2000);
+        
+        /* Translate position to sonar location */
+        VectorAdd(retObject, sonar.sensorLocation);
+        //VectorPrint(retObject, "sensorLocation", 2000);
+
+        /* Object location relative to the sensor */
+        int objectAngle = retObject.theta + sonar.currentViewAngle;
+        
+        /* Translate position to object location */
+        VectorTranslate(retObject, senseDistance, objectAngle);
+        //VectorPrint(retObject, "objectLocation", 2000);
+
+        /* Orientation is meaningless for an object location */
+        retObject.theta = 0;
+        
+        return true;
+    }
+    return false;
+}
+
+/**
+ * \brief Returns the absolute location of an object found at given view
+ * angle.
+ *
+ * This is exactly same as SonarObjectLocation() except this function
+ * first sets the angle of sonar motor to given view angle first. The angle
+ * is relative to the neutral position of the sonar (not the robot).
+ * Left (anticlockwwise) is positive and Right (clockwise) is negative.
+ */
+bool SonarFindObjectAtAngle(Sonar &sonar, Vector robotLocation,
+                            int viewAngle, long viewDistance,
+                            Vector &retObject)
+{
+    Vector returnObject;
+    int angleFrom, angleTo, bestAngle, i;
+    long bestDistance, minima;
+    long rangeData[];
+    bool found;
+    
+    if ((viewAngle < sonar.sensorMinAngle) || (viewAngle > sonar.sensorMaxAngle))
+        return false;
+
+    angleFrom = viewAngle - (sonar.toleranceAngle/2);
+    angleTo = viewAngle + (sonar.toleranceAngle/2);
+
+    SonarSweep(sonar, angleFrom, angleTo, rangeData);
+    //SonarSweepPrint(sonar, rangeData, 2000);
+    
+    /* Find the closest reading to the expected distance */
+    minima = 1000000;
+    for (i = 0; i < ArrayLen(rangeData); i = i + 2)
+    {
+        int dist = rangeData[i+1];
+        if (dist > 0 && Abs(dist - viewDistance) < minima)
+        {
+            bestDistance = dist;
+            bestAngle = rangeData[i];
+            minima = Abs(bestDistance - viewDistance);
+            found = true;
+            NumOut(0, LCD_LINE1, dist, true);
+            NumOut(0, LCD_LINE2, viewDistance, false);
+            NumOut(0, LCD_LINE3, minima, false);
+            Wait(1000);
+        }
+    }
+    
+    if (found)
+    {
+        /* Translate position to robot location */
+        Vector retObject = robotLocation;
+
+        /* Translate position to sonar location */
+        VectorAdd(retObject, sonar.sensorLocation);
+
+        /* Object location relative to the sensor */
+        int objectAngle = retObject.theta + bestAngle;
+
+        /* Translate position to object location */
+        VectorTranslate(retObject, bestDistance, objectAngle);
+
+        /* Orientation is meaningless for an object location */
+        retObject.theta = 0;
+    }
+    return found;
+}
+
+/**
+ * \brief Returns the absolute location of an object found around
+ * the reference view location.
+ *
+ * This is exactly same as SonarObjectLocationAtAngle() except this function
+ * determines the view angle from the reference view object and sets the
+ * angle of sonar motor to it. The reference view object is located in world
+ * coordinate. The viewLocation vector is only used for its x-y components.
+ */
+bool SonarFindObjectAtLocation(Sonar &sonar, Vector robotLocation,
+                               Vector viewLocation, Vector &retObject)
+{
+    Vector viewLocationRelative, sonarLocationWorld, returnObject, objectError;
+    int viewAngle;
+    long viewDistance;
+    bool found;
+    
+    // VectorPrint(viewLocationRelative, "view location", 2000);
+
+    found = false;
+    
+    /* Sonar location in world */
+    sonarLocationWorld = robotLocation;
+    // VectorPrint(sonarLocationWorld, "Robot location", 2000);
+    
+    VectorAdd(sonarLocationWorld, sonar.sensorLocation);
+    // VectorPrint(sonarLocationWorld, "Sonar location", 2000);
+
+    /* Reference view location relative to sensor */
+    viewLocationRelative = viewLocation;
+    VectorSubtract(viewLocationRelative, sonarLocationWorld);
+    // VectorPrint(viewLocationRelative, "view rel to sonar", 2000);
+
+    /* Reference view angle relative to sensor - 0 to 360 */
+    viewAngle = VectorGetAngle(viewLocationRelative);
+    viewDistance = VectorGetDistance(viewLocationRelative);
+    
+    /* view angle - -180 to +180 */
+    if (viewAngle > 180) viewAngle = viewAngle - 360;
+    
+    /* Find object at the relative view angle */
+    found = SonarFindObjectAtAngle(sonar, robotLocation, viewAngle,
+                                   viewDistance, returnObject);
+    objectError = returnObject;
+    VectorSubtract(objectError, viewLocation);
+    
+    if (found && (VectorGetDistance(objectError) < sonar.toleranceDistance))
+        retObject = returnObject;
+    else
+        found = false;
+    return found;
+}
+
+/**
+ * \brief Returns the relative (to robot reference) location of an object detected
+ * by the sonar, if any was detected within the range of sensorCutOffMin and
+ * sensorCutOffMax.
+ *
+ * The object is located in a world coordinate whose origin is the robot's
+ * referece point. retObject is the reference to Vector where object's
+ * coordinates will be stored. It returns true if an object was found within
+ * the cut-off and refObject is updated, otherwise returns false and refObject is
+ * untouched.
+ */
+bool SonarFindObjectRelative(Sonar &sonar, Vector &retObject)
+{
+    long senseDistance, objectAngle;
+
+    senseDistance = SensorUS(sonar.sensorPort); /* cm */
+    senseDistance = senseDistance * 10; /* mm */
+    senseDistance += sonar.sensorOffset; /* Reading from sensor mount point */
+    if (senseDistance < sonar.sensorCutOffMin && senseDistance > sonar.sensorCutOffMax)
+    {
+        /* Object location relative to the sensor */
+        objectAngle = sonar.sensorLocation.theta + sonar.currentViewAngle;
+        retObject.x = sonar.sensorLocation.x + senseDistance * Cos(objectAngle);
+        retObject.y = sonar.sensorLocation.y + senseDistance * Sin(objectAngle);
+        retObject.theta = 0;
+        return true;
+    }
+    return false;
+}
+
+/**
+ * \brief Returns the relative (to robot's reference point) location of an
+ * object found at given view angle.
+ *
+ * This is exactly same as SonarObjectLocationRelative() except this function
+ * first sets the angle of sonar motor to given view angle first. The angle
+ * is relative to the neutral position of the sonar. Left is (anticlockwise)
+ * is positive and Right (clockwise) is negative.
+ */
+bool SonarFindObjectAtAngleRelative(Sonar &sonar, int viewAngle,
+                                    Vector &retObject)
+{
+    int deltaAngle;
+    
+    if ((viewAngle < sonar.sensorMinAngle) || (viewAngle > sonar.sensorMaxAngle))
+        return false;
+    deltaAngle = viewAngle - sonar.currentViewAngle;
+    sonar.currentViewAngle = viewAngle;
+    deltaAngle = (deltaAngle * sonar.gearRatio) / 100;
+    if (deltaAngle > 0)
+        RotateMotor(sonar.sensorMotor, sonar.motorMovePower, deltaAngle);
+    else if (deltaAngle < 0)
+        RotateMotor(sonar.sensorMotor, -sonar.motorMovePower, -deltaAngle);
+    return SonarFindObjectRelative(sonar, retObject);
+}
+
+#ifdef ENABLE_TEST
+#include "RobotPrima.nxc"
+
+void TestSonar ()
+{
+    Vector robotLocation;
+    Vector viewLocation1;
+    Vector viewLocation2;
+    Sonar sonar;
+    Vector sensorLocation;
+    Vector retLocation;
+    int retBestAngle;
+    long retBestDistance;
+    bool success;
+    long rangeData[];
+
+    VectorInit(sensorLocation, 60, 0, 0);
+    VectorInit(robotLocation, 0, 0, 0);
+    VectorInit(viewLocation1, 250, 250, 0);
+    VectorInit(viewLocation2, 300, 0, 0);
+
+    SetSensorLowspeed(PRIMA_RANGE_SENSOR);
+    SonarInit(sonar, PRIMA_RANGE_SENSOR, sensorLocation,
+              10,    /* Sensor reading offset from mount point */
+              60,    /* Sensor range cutoff (min): 6 cm */
+              2000,  /* Sensor range cutoff (max): 200 cm */
+              20,    /* Sensor find area angle: +/- 10 degrees */
+              100,   /* Sensor find area distance: +/- 10 cm */
+              OUT_A, /* sonar motor */
+              500,   /* sonar motor gear ratio */
+              100,   /* sonar move motor speed */
+              10,    /* sonar scan motor speed */
+              -70,   /* sonar motor min angle */
+              +70);  /* sonar motor max angle */
+    /*
+    SonarSweep(sonar, -10, 10, rangeData);
+    SonarSweepPrint(sonar, rangeData, 2000);
+    
+    success = SonarGetObjectDistanceAtAngle(sonar, robotLocation, 45, 150,
+                                            retBestAngle, retBestDistance);
+    if (success == true)
+    {
+        TextOut(0, LCD_LINE1, "Best Angle 1", true);
+        NumOut(0, LCD_LINE2, retBestAngle, false);
+        TextOut(0, LCD_LINE3, "Best Distance 1", false);
+        NumOut(0, LCD_LINE4, retBestDistance, false);
+        Wait(2000);
+    }
+    SonarGetObjectDistanceAtLocation (sonar, robotLocation, viewLocation1, retBestAngle,
+                                                retBestDistance);
+    success = true;
+    if (success == true)
+    {
+        TextOut(0, LCD_LINE1, "Best Angle 1", true);
+        NumOut(0, LCD_LINE2, retBestAngle, false);
+        TextOut(0, LCD_LINE3, "Best Distance 1", false);
+        NumOut(0, LCD_LINE4, retBestDistance, false);
+        Wait(2000);
+    }
+    */
+    success = SonarTriangulateLandmarks(sonar, robotLocation, viewLocation1,
+                                        viewLocation2, retLocation);
+    if (success == true)
+    {
+        VectorPrint(retLocation, "Robot Location", 2000);
+    }
+    Wait(20000);
+}
+
+/*
+task main()
+{
+    TestSonar();
+}
+*/
+#endif /* ENABLE_TEST */
+#endif /* __SONAR_H_ */
+

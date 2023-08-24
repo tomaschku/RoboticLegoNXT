@@ -1,0 +1,1105 @@
+
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+/**
+ * \file gui.nxc
+ * \ingroup utilities
+ * \brief Graphical user interface functions.
+ *
+ * \author Martin Aumair
+ * \date   29.07.2013
+ *
+ * 1. Create an object                                               <br>
+ * 2. Make the object visible (showObject)                           <br>
+ * 3. Use object functions                                           <br>
+ * 4. Optional: Delete Object                                        <br>
+ *                                                                   <br>
+ * Name convention (Qt Style):                                       <br>
+ * Object names:                   ProgressBar      (capitalized)    <br>
+ * Direct object functions:        ProgressBarSet(..)                <br>
+ * (like in C++ objects ProgressBar->set)                            <br>
+ * Normal (not direct) functions:  showObject(..)                    <br>
+ * new/delete:                     newProgressBar(..)                <br>
+ *                                 deleteObject(..)                  <br>
+ *                                                                   <br>
+/*
+
+/*
+   CHANGELOG:
+      - do not reset all parameters in delete function saves a lot
+        of memory!
+   TODO:
+   BUGS:
+*/
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+///////////////////USER_PARAMETERS////////////////////////
+/**
+  (For advanced users)
+  Define how much objects do you use in
+  your project. For example if you do not
+  use the led object you set it to 0 to save
+  memory!
+*/
+#define _MAX_PROGRESSBAR    3
+/// \see _MAX_PROGRESSBAR
+#define _MAX_MARKER         3
+/// \see _MAX_PROGRESSBAR
+#define _MAX_NUMINDICATOR   3
+/// \see _MAX_PROGRESSBAR
+#define _MAX_LED            3
+/// \see _MAX_PROGRESSBAR
+#define _MAX_SLIDER         3
+/// \see _MAX_PROGRESSBAR
+#define _MAX_STR_INDICATOR  3
+
+/// Style for marker
+#define MARKER_MAJOR_LEN  6
+/// Style for marker
+#define MARKER_MINOR_LEN  3
+
+
+/// Starting ObjectId for different Objects.
+#define PROGRESS_BAR_H 1000
+#define PROGRESS_BAR_V 2000
+#define MARKER_OBJECT  3000
+#define NUM_INDICATOR  4000
+#define LED_OBJECT     5000
+#define SLIDER_H       6000
+#define SLIDER_V       7000 // not implemented
+#define STR_INDICATOR  8000
+
+/**
+   \private
+   Get the array index of the object.
+*/
+#define  getObjIdx(x)  x%1000
+
+/// \cond
+
+// All objects have to "inherit" from this struct type.
+struct sGuiObject
+{
+   int objectId;
+   int parentId;
+   bool visible;
+};
+
+
+struct sGuiObjectProgressBar
+{
+   sGuiObject object;
+   int x, y;
+   int width, height;
+   int min, max;
+   int data;
+   int scale;
+};
+sGuiObjectProgressBar ProgressBar[_MAX_PROGRESSBAR];
+sGuiObjectProgressBar Slider[_MAX_SLIDER];
+
+
+struct sGuiObjectMarker
+{
+   sGuiObject object;
+   int scale;
+   int ratio;
+};
+sGuiObjectMarker Marker[_MAX_MARKER];
+
+
+struct sGuiObjectNumIndicator
+{
+   sGuiObject object;
+   int x, y;
+   string name;
+   float data;
+};
+sGuiObjectNumIndicator NumInd[_MAX_NUMINDICATOR];
+
+
+struct sGuiObjectLed
+{
+   sGuiObject object;
+   int x, y, r;
+   bool state;
+};
+sGuiObjectLed   LedObj[_MAX_LED];
+
+
+struct sGuiObjectStrIndicator
+{
+   sGuiObject object;
+   int x, y;
+   string name;
+   string data;
+};
+sGuiObjectStrIndicator StrInd[_MAX_STR_INDICATOR];
+
+/// \endcond
+
+/**
+ * \brief Create Progressbar Object.
+ *
+ * The ProgressBar object provides a horizontal or vertical progress bar.
+ * A progress bar is used to give the user an indication of the progress
+ * of an operation and to reassure them that the application is still running.
+ * <br>
+ * The progress bar uses the concept of steps.
+ * You set it up by specifying the minimum and maximum possible step values,
+ *  and it will display the percentage of steps that have been completed
+ * when you later give it the current step value.
+ * The percentage is calculated
+ * by dividing the progress value - minimum divided by maximum - minimum.
+ *
+ * \param x        X-Location on LCD (0-64).
+ * \param y        Y-Location on LCD (0-100).
+ * \param width    The widht of the bar in pixel.
+ * \param height   The height of the bar in pixel.
+ * \param min      Minimum possible step.
+ * \param max      Maximum possible step.
+ * \param opt      Use PROGRESS_BAR_H for horizontal and
+                   PROGRESS_BAR_V for vertical progress bar
+ * \param objId    Object ID. You need the ID for functions.
+ * \return         Returns false if there is an error with your input
+ *
+*/
+bool newProgressBar(int x,
+                    int y,
+                    int width,
+                    int height,
+                    int min,
+                    int max,
+                    int opt,
+                    int &objId)
+{
+   int cnt;
+   while(cnt < ArrayLen(ProgressBar)) {
+      if(ProgressBar[cnt].object.objectId <= 0)
+         break;
+      cnt++;
+   }
+
+   objId = opt + cnt;
+
+   int idx = getObjIdx(objId);
+
+   ProgressBar[idx].object.objectId = objId;
+   ProgressBar[idx].object.visible  = false;
+   ProgressBar[idx].x        = x;
+   ProgressBar[idx].y        = y;
+   ProgressBar[idx].width    = width;
+   ProgressBar[idx].height   = height;
+   ProgressBar[idx].min      = min;
+   ProgressBar[idx].max      = max;
+   ProgressBar[idx].data     = 0;
+}
+
+
+/**
+ * \brief Create Slider Object.
+ *
+ * The slider is the classic widget for controlling a bounded value.
+ * It lets the user move a slider handle along a horizontal or vertical groove
+ * and translates the handle's position into an integer value within the legal range.
+ * <br>
+ * The slider uses the concept of steps.
+ * You set it up by specifying the minimum and maximum possible step values,
+ * and it will display the percentage of steps that have been completed
+ * when you later give it the current step value.
+ * The percentage is calculated
+ * by dividing the progress value - minimum divided by maximum - minimum.
+ *
+ * \param x        X-Location on LCD (0-64).
+ * \param y        Y-Location on LCD (0-100).
+ * \param width    The widht of the bar in pixel.
+ * \param height   The height of the bar in pixel.
+ * \param min      Minimum possible step.
+ * \param max      Maximum possible step.
+ * \param opt      Use SLIDER_H for horizontal slider.
+ * \param objId    Object ID. You need the ID for functions.
+ * \return         Returns false if there is an error with your input
+ *
+*/
+bool newSlider(int x,
+               int y,
+               int width,
+               int height,
+               int min,
+               int max,
+               int opt,
+               int &objId)
+{
+   int cnt;
+   while(cnt < ArrayLen(Slider)) {
+      if(Slider[cnt].object.objectId <= 0)
+         break;
+      cnt++;
+   }
+   objId = opt + cnt;
+
+   int idx = getObjIdx(objId);
+
+   Slider[idx].object.objectId = objId;
+   Slider[idx].object.visible  = false;
+   Slider[idx].x        = x;
+   Slider[idx].y        = y;
+   Slider[idx].width    = width;
+   Slider[idx].height   = height;
+   Slider[idx].min      = min;
+   Slider[idx].max      = max;
+   Slider[idx].data     = 0;
+   Wait(1);  // anti bug
+}
+
+
+/**
+ * \brief Create Marker Object.
+ *
+ * The Marker is a object which you can use in combination with a
+ * ProgressBar. There are major and minor lines (like a ruler).
+ * Scale defines the steps between the lines.
+ * Ration defines the change between major and minor lines.
+ *
+ * \param parent   Object ID of parent object (ProgressBar)
+ * \param scale    Steps between to lines.
+ * \param ratio    Ratio between minor and major lines.
+ *                 Pass 0 to use only major lines.
+ * \param objId    Object ID. You need the ID for functions.
+ * \return         Returns false if there is an error with your input
+ *
+*/
+bool newMarker(int parent, int scale, int ratio, int &objId)
+{
+   int cnt;
+   while(cnt < ArrayLen(Marker)) {
+      if(Marker[cnt].object.objectId <= 0)
+         break;
+      cnt++;
+   }
+   objId = MARKER_OBJECT + cnt;
+   int idx = getObjIdx(objId);
+
+   Marker[idx].object.objectId = objId;
+   Marker[idx].object.parentId   = parent;
+   Marker[idx].object.visible  = false;
+   Marker[idx].scale           = scale;
+   Marker[idx].ratio           = ratio;
+}
+
+/**
+ * \brief Create Numeric Indicator.
+ *
+ * Numeric indicators are the simplest way to display numeric data.
+ * After you set the position of the indicator you do not have to worry
+ * about overwriting and positioning..
+ * You can specifie a name for your indicator which is displayed with the number.
+ * Note that the indicator do not have a space limitation.
+ *
+ * \param x        X-Location on LCD (0-64).
+ * \param y        Y-Location on LCD (0-100).
+ * \param name     Label name.
+ * \param objId    Object ID. You need the ID for functions.
+ * \return         Returns false if there is an error with your input
+ *
+*/
+bool newNumIndicator(int x, int y, string name, int &objId)
+{
+   int cnt;
+   while(cnt < ArrayLen(NumInd)) {
+      if(NumInd[cnt].object.objectId <= 0)
+         break;
+      cnt++;
+   }
+   objId = NUM_INDICATOR + cnt;
+   int idx = getObjIdx(objId);
+   
+   NumInd[idx].object.objectId = objId;
+   NumInd[idx].object.visible = false;
+   NumInd[idx].x = x;
+   NumInd[idx].y = y;
+   NumInd[idx].name = name;
+   NumInd[idx].data = 0.0;
+}
+
+
+/**
+ * \brief Create Led Indicator-
+ *
+ * A LED is a simple way to indicate a boolean.
+ * There are two states:
+ * True:  The shape of the LED is filled.
+ * False: Empty circle.
+ *
+ * \param x        X-Location on LCD (0-64).
+ * \param y        Y-Location on LCD (0-100).
+ * \param radius   The size of the circle ind pixel
+ * \param objId    Object ID. You need the ID for functions.
+ * \return         Returns false if there is an error with your input
+ *
+*/
+bool newLed(int x, int y, int radius, int &objId)
+{
+   int cnt;
+   while(cnt < ArrayLen(LedObj)) {
+      if(LedObj[cnt].object.objectId <= 0)
+         break;
+      cnt++;
+   }
+   objId = LED_OBJECT + cnt;
+   int idx = getObjIdx(objId);
+   
+   LedObj[idx].object.objectId = objId;
+   LedObj[idx].object.visible = false;
+   LedObj[idx].x = x;
+   LedObj[idx].y = y;
+   LedObj[idx].r = radius;
+   LedObj[idx].state = false;
+}
+
+
+/**
+ * \brief Create String Indicator.
+ *
+ * String indicators are the simplest way to display "text data".
+ * After you set the position of the indicator you do not have to worry
+ * about overwriting and positioning..
+ * You can specifie a name for your indicator which is displayed with the data string.
+ * Note that the indicator do not have a space limitation.
+ *
+ * \param x        X-Location on LCD (0-64).
+ * \param y        Y-Location on LCD (0-100).
+ * \param name     Label name.
+ * \param objId    Object ID. You need the ID for functions.
+ * \return         Returns false if there is an error with your input
+ *
+*/
+bool newStrIndicator(int x, int y, string name, int &objId)
+{
+   int cnt;
+   while(cnt < ArrayLen(StrInd)) {
+      if(StrInd[cnt].object.objectId <= 0)
+         break;
+      cnt++;
+   }
+   objId = STR_INDICATOR + cnt;
+   int idx = getObjIdx(objId);
+
+   StrInd[idx].object.objectId = objId;
+   StrInd[idx].object.visible = false;
+   StrInd[idx].x = x;
+   StrInd[idx].y = y;
+   StrInd[idx].name = name;
+   StrInd[idx].data = "";
+}
+
+
+
+/**
+    Update progress bar
+*/
+bool ProgressBarUpdate(int objId)
+{
+   int idx = getObjIdx(objId);
+   int range;
+   if(ProgressBar[idx].object.objectId < PROGRESS_BAR_V)
+      range = ProgressBar[idx].width;
+   else
+      range = ProgressBar[idx].height;
+
+   int widthVirtual =  ProgressBar[idx].max -  ProgressBar[idx].min;
+
+   float step =  range / widthVirtual;
+   float realWidth;
+
+   if(ProgressBar[idx].data >= ProgressBar[idx].max) {
+      realWidth = range;
+   }
+   else if(ProgressBar[idx].data <= ProgressBar[idx].min) {
+      realWidth = 0;
+   }
+   else {
+      realWidth = ProgressBar[idx].data * step;
+   }
+
+   ////////////////DRAW//////////////////////
+   // Clean
+   RectOut(ProgressBar[idx].x,
+           ProgressBar[idx].y,
+           ProgressBar[idx].width,
+           ProgressBar[idx].height,
+           DRAW_OPT_FILL_SHAPE + DRAW_OPT_INVERT);
+           
+   if(ProgressBar[idx].object.objectId < PROGRESS_BAR_V) {
+      RectOut(ProgressBar[idx].x,
+              ProgressBar[idx].y,
+              realWidth,
+              ProgressBar[idx].height,
+              DRAW_OPT_FILL_SHAPE);
+   }
+   else {
+       RectOut(ProgressBar[idx].x,
+               ProgressBar[idx].y,
+               ProgressBar[idx].width,
+               realWidth,
+               DRAW_OPT_FILL_SHAPE);
+   }
+   // redraw frame
+   RectOut(ProgressBar[idx].x,
+           ProgressBar[idx].y,
+           ProgressBar[idx].width,
+           ProgressBar[idx].height,
+           DRAW_OPT_NORMAL);
+}
+
+/**
+
+   Use showObject.
+*/
+bool ProgressBarShow(int objId, unsigned long drawOpt)
+{
+   int idx = getObjIdx(objId);
+   RectOut(ProgressBar[idx].x,
+           ProgressBar[idx].y,
+           ProgressBar[idx].width,
+           ProgressBar[idx].height,
+           drawOpt);
+   if(DRAW_OPT_NORMAL == drawOpt) {
+      ProgressBarUpdate(objId);
+      ProgressBar[idx].object.visible = true;
+   }
+   else {
+      ProgressBar[idx].object.visible = false;
+   }
+}
+
+/**
+  * \brief Add a value to the actual state.
+  *
+  * Attempting to change the current value to one outside the minimum-maximum
+  * range has no effect on the current value.
+  *
+  * \param objId         Object ID
+  * \param n             The numeric value to add.
+  * \param update        Update the ProgressBar on LCD.
+*/
+bool ProgressBarAdd(int objId, int n, bool update = true)
+{
+   int idx = getObjIdx(objId);
+   ProgressBar[idx].data += n;   // might be buggi?
+   if( (ProgressBar[idx].data <= ProgressBar[idx].max)
+      && (ProgressBar[idx].data >= 0) ) {
+
+      if(update && ProgressBar[idx].object.visible)
+         ProgressBarUpdate(idx);
+   }
+}
+
+/**
+  * \brief Set a value between min and max.
+  *
+  * Attempting to change the current value to one outside the minimum-maximum
+  * range has no effect on the current value.
+  *
+  * \param objId         Object ID
+  * \param n             The numeric value to set.
+  * \param update        Update the ProgressBar on LCD.
+*/
+bool ProgressBarSet(int objId, int n, bool update = true)
+{
+   int idx = getObjIdx(objId);
+   ProgressBar[idx].data = n;
+   if( (ProgressBar[idx].data <= ProgressBar[idx].max)
+      &&(ProgressBar[idx].data >= 0) ) {
+      
+      if(update && ProgressBar[idx].object.visible)
+         ProgressBarUpdate(idx);
+   }
+}
+
+
+/**
+  \private
+*/
+bool SliderUpdate(int objId)
+{
+   int idx = getObjIdx(objId);
+   int range;
+   if(Slider[idx].object.objectId < SLIDER_V)
+      range = Slider[idx].width;
+   else
+      range = Slider[idx].height;
+
+   int widthVirtual =  Slider[idx].max -  Slider[idx].min;
+
+   float step =  range / widthVirtual;
+   float realWidth;
+
+   if(Slider[idx].data >= Slider[idx].max) {
+      realWidth = range;
+   }
+   else if(Slider[idx].data <= Slider[idx].min) {
+      realWidth = 0;
+   }
+   else {
+      realWidth = Slider[idx].data * step;
+   }
+   
+   // there should be a better way!
+   int correct_ends0 = 0;
+   int correct_ends1 = 0;
+   if(realWidth <= 2) {
+      correct_ends0 = 2;
+      correct_ends1 = 2;
+   }
+   else if(realWidth >= (Slider[idx].width-2)) {
+      correct_ends0 = 0;
+      correct_ends1 = 2;
+   }
+
+   ////////////////DRAW//////////////////////
+   // Clear Slider
+   RectOut(Slider[idx].x,
+           Slider[idx].y,
+           Slider[idx].width,
+           Slider[idx].height,
+           DRAW_OPT_FILL_SHAPE|DRAW_OPT_INVERT);
+           
+   if(Slider[idx].object.objectId < SLIDER_V) {
+      RectOut(Slider[idx].x + realWidth - 2 + correct_ends0,
+              Slider[idx].y,
+              4 - correct_ends1,
+              Slider[idx].height,
+              DRAW_OPT_FILL_SHAPE);
+   }
+   else {
+       RectOut(Slider[idx].x + realWidth - 2 + correct_ends0,
+               Slider[idx].y,
+               Slider[idx].width,
+               4 - correct_ends1,
+               DRAW_OPT_FILL_SHAPE);
+   }
+   // draw cradle
+   RectOut(Slider[idx].x,
+           Slider[idx].y + Slider[idx].height/3,
+           Slider[idx].width,
+           Slider[idx].height/3,
+           DRAW_OPT_NORMAL + DRAW_OPT_FILL_SHAPE);
+}
+
+/// \private
+/// Use showObject
+bool SliderShow(int objId, unsigned long drawOpt)
+{
+   int idx = getObjIdx(objId);
+   if(DRAW_OPT_NORMAL == drawOpt) {
+      if(Slider[idx].object.objectId < SLIDER_V) {
+         RectOut(Slider[idx].x,
+                 Slider[idx].y + Slider[idx].height/3,
+                 Slider[idx].width,
+                 Slider[idx].height/3,
+                 drawOpt + DRAW_OPT_FILL_SHAPE);
+      }
+      else {
+         RectOut(Slider[idx].x,
+                 Slider[idx].y + Slider[idx].height/3,
+                 Slider[idx].width,
+                 Slider[idx].height/3,
+                 drawOpt + DRAW_OPT_FILL_SHAPE);
+      }
+      SliderUpdate(objId);
+      Slider[idx].object.visible = true;
+   }
+   else {
+     // clean whole area
+     RectOut(Slider[idx].x,
+             Slider[idx].y,
+             Slider[idx].width,
+             Slider[idx].height,
+             drawOpt);
+      Slider[idx].object.visible = false;
+   }
+   if(DRAW_OPT_NORMAL == drawOpt)
+      StrInd[idx].object.visible = true;
+   else
+      StrInd[idx].object.visible = false;
+}
+
+/**
+  * \brief Add a value to the actual state.
+  *
+  * Attempting to change the current value to one outside the minimum-maximum
+  * range has no effect on the current value.
+  *
+  * \param objId         Object ID
+  * \param n             The numeric value to add.
+  * \param update        Update the ProgressBar on LCD.
+*/
+bool SliderAdd(int objId, int n, bool update = true)
+{
+   int idx = getObjIdx(objId);
+   Slider[idx].data += n;   // bugi?
+   
+   if( (Slider[idx].data <= Slider[idx].max)
+      && (Slider[idx].data >= 0) ) {
+      
+      if(update && Slider[idx].object.visible)
+         SliderUpdate(idx);
+   }
+}
+
+/**
+  * \brief Set a value between min and max.
+  *
+  * Attempting to change the current value to one outside the minimum-maximum
+  * range has no effect on the current value.
+  *
+  * \param objId         Object ID
+  * \param n             The numeric value to set.
+  * \param update        Update the ProgressBar on LCD.
+*/
+bool SliderSet(int objId, int n, bool update = true)
+{
+   int idx = getObjIdx(objId);
+   Slider[idx].data = n; // bugi?
+   
+   if( (Slider[idx].data <= Slider[idx].max)
+      &&(Slider[idx].data >= 0) ) {
+
+      if(update && Slider[idx].object.visible)
+         SliderUpdate(idx);
+   }
+}
+
+/// \private
+/// Use objectShow()
+bool MarkerShow(int objId, byte drawOpt)
+{
+   int lineLen;
+   int idx = getObjIdx(objId);
+   int idxP = getObjIdx(Marker[idx].object.parentId);
+   
+   if(ProgressBar[idxP].object.objectId < PROGRESS_BAR_V)
+   {
+      float step =  ProgressBar[idxP].width / Marker[idx].scale;
+      
+      for(int i=0; i < (Marker[idx].scale + 1); i++) {
+         if(i%Marker[idx].ratio == 0)
+            lineLen = MARKER_MAJOR_LEN;
+         else
+            lineLen = MARKER_MINOR_LEN;
+
+         LineOut(ProgressBar[idxP].x + step*i,
+                 ProgressBar[idxP].y,
+                 ProgressBar[idxP].x + step*i,
+                 ProgressBar[idxP].y - lineLen,
+                 drawOpt);
+      }
+    }
+    else
+    {
+      float step =  ProgressBar[idxP].height / Marker[idx].scale;
+
+      for(int i=0; i < (Marker[idx].scale + 1); i++) {
+      
+         if(i%Marker[idx].ratio == 0)
+            lineLen = MARKER_MAJOR_LEN;
+         else
+            lineLen = MARKER_MINOR_LEN;
+
+         LineOut(ProgressBar[idxP].x,
+                 ProgressBar[idxP].y + step*i,
+                 ProgressBar[idxP].x - lineLen,
+                 ProgressBar[idxP].y + step*i,
+                 drawOpt);
+      }
+   }
+   if(DRAW_OPT_NORMAL == drawOpt)
+      Marker[idx].object.visible = true;
+   else
+      Marker[idx].object.visible = false;
+}
+
+void NumIndicatorShow(int objId, byte drawOpt)
+{
+   int idx = getObjIdx(objId);
+   string cat = StrCat(NumInd[idx].name,"%0.f");
+   string out = FormatVal(cat, NumInd[idx].data);
+   TextOut(NumInd[idx].x, NumInd[idx].y, out, drawOpt);
+}
+
+/**
+  * \brief Set a numeric value.
+  *
+  * \param objId         Object ID
+  * \param data          The numeric value to set.
+*/
+void NumIndicatorSet(int objId, float data)
+{
+   int idx = getObjIdx(objId);
+   NumIndicatorShow(objId, DRAW_OPT_FILL_SHAPE|DRAW_OPT_INVERT);
+   NumInd[idx].data = data;
+   NumIndicatorShow(objId, DRAW_OPT_NORMAL);
+}
+
+/**
+  * \brief Set the label name of num indicator.
+  *
+  * \param objId         Object ID
+  * \param name          Name of lable.
+*/
+inline void NumIndicatorName(int objId, string name)
+{
+    NumInd[getObjIdx(objId)].name = name;
+    NumIndicatorShow(objId, DRAW_OPT_FILL_SHAPE|DRAW_OPT_INVERT);
+    NumIndicatorShow(objId, DRAW_OPT_NORMAL);
+}
+
+inline void LedShow(int objId, byte drawOpt)
+{
+   int idx = getObjIdx(objId);
+   CircleOut(LedObj[idx].x, LedObj[idx].y, LedObj[idx].r, drawOpt);
+   if(DRAW_OPT_NORMAL == drawOpt)
+      StrInd[idx].object.visible = true;
+   else
+      StrInd[idx].object.visible = false;
+}
+
+/**
+  * \brief Set the state of the LED.
+  *
+  * \param objId         Object ID
+  * \param state
+*/
+inline void LedSet(int objId, bool state)
+{
+   int idx = getObjIdx(objId);
+   LedObj[idx].state = state;
+   if(state)
+      CircleOut(LedObj[idx].x, LedObj[idx].y, LedObj[idx].r-1, DRAW_OPT_FILL_SHAPE);
+   else
+      CircleOut(LedObj[idx].x, LedObj[idx].y, LedObj[idx].r-1, DRAW_OPT_INVERT+DRAW_OPT_FILL_SHAPE);
+}
+
+/**
+  * \brief Invert the current state of LED.
+  *
+  * Suitable for blinking:
+  * Ex: while(1) {LedInvert(led1);  Wait(SEC_1);}
+  *
+  * \param objId         Object ID
+*/
+inline bool LedInvert(int objId)
+{
+   int idx = getObjIdx(objId);
+   LedSet(objId, !LedObj[idx].state);
+   return LedObj[idx].state;
+}
+
+
+inline void StrIndicatorShow(int objId, byte drawOpt)
+{
+   int idx = getObjIdx(objId);
+   string cat = StrCat(StrInd[idx].name, StrInd[idx].data);
+   TextOut(StrInd[idx].x, StrInd[idx].y, cat, drawOpt);
+   if(DRAW_OPT_NORMAL == drawOpt)
+      StrInd[idx].object.visible = true;
+   else
+      StrInd[idx].object.visible = false;
+}
+
+/**
+  * \brief Set the string data.
+  *
+  * \param objId         Object ID
+  * \param data
+*/
+inline void StrIndicatorSet(int objId, string data)
+{
+   int idx = getObjIdx(objId);
+   StrIndicatorShow(objId, DRAW_OPT_FILL_SHAPE|DRAW_OPT_INVERT);
+   StrInd[idx].data = data;
+   StrIndicatorShow(objId, DRAW_OPT_NORMAL);
+}
+
+/**
+  * \brief Set the label name of str indicator.
+  *
+  * \param objId         Object ID
+  * \param name          Name of lable.
+*/
+inline void StrIndicatorName(int objId, string name)
+{
+   StrInd[getObjIdx(objId)].name = name;
+   StrIndicatorShow(objId, DRAW_OPT_FILL_SHAPE|DRAW_OPT_INVERT);
+   StrIndicatorShow(objId, DRAW_OPT_NORMAL);
+}
+
+
+/*
+#define PROGRESS_BAR_H 1000
+#define PROGRESS_BAR_V 2000
+#define MARKER_OBJECT  3000
+#define NUM_INDICATOR  4000
+#define LED_OBJECT     5000
+#define SLIDE_H        6000
+#define SLIDER_V       7000
+#define STR_INDICATOR  8000
+*/
+
+/**
+ * \brief Set object visibility.
+ *
+ * \param objId         Object ID.
+ * \param visible       True for visible.
+ * \return              Returns false if there is an error with your input
+ *
+*/
+bool objectShow(int objId, bool visible = true)
+{
+   byte drawOpt;
+   if(visible)
+      drawOpt = DRAW_OPT_NORMAL;
+   else
+      drawOpt = DRAW_OPT_FILL_SHAPE|DRAW_OPT_INVERT;
+   if(objId < MARKER_OBJECT) {
+      ProgressBarShow(objId, drawOpt);
+   }
+   else if(objId < NUM_INDICATOR) {
+      MarkerShow(objId, drawOpt);
+   }
+   else if(objId < LED_OBJECT) {
+      NumIndicatorShow(objId, drawOpt);
+   }
+   else if(objId < SLIDER_H) {
+      LedShow(objId, drawOpt);
+   }
+   else if(objId < STR_INDICATOR) {
+      SliderShow(objId, drawOpt);
+   }
+   else if(objId < 9000) {
+      StrIndicatorShow(objId, drawOpt);
+   }
+}
+
+
+void deleteProgressBar(int objId)
+{
+   int idx = getObjIdx(objId);
+   
+   if(ProgressBar[idx].object.visible)
+      objectShow(objId, false);
+
+   ProgressBar[idx].object.objectId = 0;
+//   ProgressBar[idx].object.visible  = false;
+//   ProgressBar[idx].x        = 0;
+//   ProgressBar[idx].y        = 0;
+//   ProgressBar[idx].width    = 0;
+//   ProgressBar[idx].height   = 0;
+//   ProgressBar[idx].min      = 0;
+//   ProgressBar[idx].max      = 0;
+//   ProgressBar[idx].data     = 0;
+}
+
+
+void deleteSlider(int objId)
+{
+   int idx = getObjIdx(objId);
+
+   if(Slider[idx].object.visible)
+      objectShow(objId, false);
+
+   Slider[idx].object.objectId = 0;
+//   Slider[idx].object.visible  = false;
+//   Slider[idx].x        = 0;
+//   Slider[idx].y        = 0;
+//   Slider[idx].width    = 0;
+//   Slider[idx].height   = 0;
+//   Slider[idx].min      = 0;
+//   Slider[idx].max      = 0;
+//   Slider[idx].data     = 0;
+   Wait(1);  // anti bug
+}
+
+void deleteMarker(int objId)
+{
+   int idx = getObjIdx(objId);
+   
+   if(Marker[idx].object.visible)
+      objectShow(objId, false);
+      
+   Marker[idx].object.objectId   = 0;
+//   Marker[idx].object.parentId   = 0;
+//   Marker[idx].object.visible    = false;
+//   Marker[idx].scale             = 0;
+//   Marker[idx].ratio             = 0;
+}
+
+void deleteNumIndicator(int objId)
+{
+   int idx = getObjIdx(objId);
+
+   if(NumInd[idx].object.visible)
+      objectShow(objId, false);
+
+   NumInd[idx].object.objectId = 0;
+//   NumInd[idx].object.visible = false;
+//   NumInd[idx].x = 0;
+//   NumInd[idx].y = 0;
+//   NumInd[idx].name = "";
+//   NumInd[idx].data = 0.0;
+}
+
+bool deleteLed(int objId)
+{
+   int idx = getObjIdx(objId);
+
+   if(LedObj[idx].object.visible)
+      objectShow(objId, false);
+
+   LedObj[idx].object.objectId = 0;
+//   LedObj[idx].object.visible = false;
+//   LedObj[idx].x = 0;
+//   LedObj[idx].y = 0;
+//   LedObj[idx].r = 0;
+//   LedObj[idx].state = false;
+}
+
+void deleteStrIndicator(int objId)
+{
+   int idx = getObjIdx(objId);
+
+   if(StrInd[idx].object.visible)
+      objectShow(objId, false);
+
+   StrInd[idx].object.objectId = 0;
+//   StrInd[idx].object.visible = false;
+//   StrInd[idx].x = 0;
+//   StrInd[idx].y = 0;
+//   StrInd[idx].name = "";
+//   StrInd[idx].data = "";
+}
+
+
+/**
+ * \brief Delete any GUI-Object.
+ *
+ * Delete any object. The object will be cleaned from lcd.
+ *
+ * \param objId       Object ID.
+ *
+*/
+void deleteObject(int objId)
+{
+   if(objId < MARKER_OBJECT) {
+      deleteProgressBar(objId);
+   }
+   else if(objId < NUM_INDICATOR) {
+      deleteMarker(objId);
+   }
+   else if(objId < LED_OBJECT) {
+      deleteNumIndicator(objId);
+   }
+   else if(objId < SLIDER_H) {
+      deleteLed(objId);
+   }
+   else if(objId < STR_INDICATOR) {
+      deleteSlider(objId);
+   }
+   else if(objId < 9000) {
+      deleteStrIndicator(objId);
+   }
+}
+
+/*
+task main()
+{
+   int pb1, pb2;
+   int mark1, mark2;
+   int numInd1, strInd1;
+   int led1;
+   ///////////////x///y//h///w//min/max//mode///////////objId/
+   newProgressBar(75, 5, 16, 50, 0, 100, PROGRESS_BAR_V, pb1);
+   ///////parent//scale//ratio//objId/
+   newMarker(pb1, 10, 5, mark1);
+   newProgressBar(5, 40, 50, 16, 0, 100, PROGRESS_BAR_H, pb2);
+   newMarker(pb2, 10, 5, mark2);
+   ////////////////x//y//name////objId/////
+   newNumIndicator(1, 5, "State:", numInd1);
+   //////////////////////////////////////////////
+   newLed(60, 7, 6, led1);
+   /////////////////////////////////////
+   newStrIndicator(1, 18, "Data:", strInd1);
+   
+   
+   objectShow(pb1);
+   objectShow(pb2);
+   objectShow(mark1);
+   objectShow(mark2);
+   objectShow(numInd1);
+   objectShow(led1);
+   objectShow(strInd1);
+
+   StrIndicatorSet(strInd1, "Ready");
+   Wait(1000);
+   
+   for(int i; i<10; i++) {
+      ProgressBarAdd(pb1, 10);
+      NumIndicatorSet(numInd1, 10*i+10);
+      ProgressBarAdd(pb2, 10);
+      LedInvert(led1);
+      Wait(500);
+   }
+   StrIndicatorSet(strInd1, "Done");
+   Wait(2000);
+   StrIndicatorSet(strInd1, "Delete");
+   deleteObject(pb1);
+   deleteObject(pb2);
+   deleteObject(mark1);
+   deleteObject(mark2);
+   deleteObject(numInd1);
+   deleteObject(led1);
+   deleteObject(strInd1);
+   Wait(1500);
+}
+*/
+
+
+task main()
+{
+   int slide1, slide2;
+   int pb1, pb2;
+   
+   newSlider(5, 40, 50, 16, 0, 100, SLIDER_H, slide1);
+   newProgressBar(5, 10, 50, 16, 0, 100, PROGRESS_BAR_H, pb2);
+   
+
+   objectShow(slide1);
+   objectShow(pb2);
+
+   SliderSet(slide1, 50);
+   ProgressBarSet(pb1, 50);
+
+   while(true) {
+      Wait(100);
+      int but = getchar();
+      if(but == BTNRIGHT) {
+         SliderAdd(slide1, 5);
+         ProgressBarAdd(pb1, 5);
+      }
+      else if(but == BTNLEFT) {
+         SliderAdd(slide1, -5);
+         ProgressBarAdd(pb1, -5);
+      }
+      else if(but == BTNCENTER)
+         break;
+   }
+
+   deleteObject(slide1);
+   deleteObject(pb1);
+   Wait(2000);
+}
+
+

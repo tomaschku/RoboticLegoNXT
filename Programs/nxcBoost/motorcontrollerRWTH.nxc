@@ -1,0 +1,784 @@
+//#!C
+/*
+%
+% See also: http://www.mindstorms.rwth-aachen.de/trac/wiki/MotorControl
+%
+% CHANGELOG:
+% * nxcBoost Version 0.7
+%   - Test: Tacholimits below 80 deg are critical. The motor overshoots target position
+%     if we do not limit the power! Use lower power values.
+%     A good rule: if(tachoLimit < 80) -> power = tachoLimit + 5
+%                  if(tachoLimit < 10) -> power = 10
+%    This is not the best solution but fiddling with the control loop is also not
+%    very easy especially because this was not my work.
+%   - Now emergency-mode brakes the motor.
+%
+% * nxcBoost Version 0.6
+%   - Changed MOTORSTOPPED_RESTINGPERIOD in MotorFunctions.nxc from 250 to 100
+%   - Removed debugging functions from MotorFunctions.nxc
+%   - removed look-up table to reduce memory. Theres now a function
+%     called "Peak GaussianPeak Modified ReciprocalWithOffset model" which calculates
+%     the speed values.
+%   - wait until move complete option just like RotateMotor
+%   - after testing with labview new model: "NIST_NIST_Hahn_ReciprocalWithOffset_model"
+%
+%
+% * nxcBoost Version 0.5, 16/07/2013
+%   - Edit so that nxc users may use it as library.
+%   - changed globals in MotorControl22.nxc to struct and unique names.
+%   - functions are now thread save.
+%   - removed TaskBusySignal, maby callback to function?
+%   - changed IsMotorReady to moveDone
+%   - new function resetMotor
+%   - if you do not need "none blocking motor commands"
+%     you can now define NO_CONTROLLER_TASK_SERVICE and save about half
+%     of memory! No sync support yet!
+%
+% * Version 2.2, 2010/09/14
+%   First released with toolbox version 4.04
+%   - Commented dead code in case compiler optimization doesn't find it
+%   - No real code changes
+%   - Version to be recompiled with newer NBC/NXC compiler versions,
+%     as some multi-threading / optimization bugs were fixed.
+%   - Not recommending FW version 1.26 anymore
+%   - Updated version numbers
+%
+%  * Version 2.1, 2009/08/31
+%    First released with toolbox version 4.01
+%    - Considered to be stable and working
+%    - Very occasional freezes with FW 1.26 during
+%      massive production use, see also:
+%      http://www.mindstorms.rwth-aachen.de/trac/ticket/51
+%
+%
+% Signature
+%   Author: Linus Atorf (see AUTHORS)
+%   Edit: Martin Aumair
+%   Date: 2010/09/14
+%   Copyright: 2007-2010, RWTH Aachen University
+%
+%
+%
+% ***********************************************************************************************
+% *  This file is part of the RWTH - Mindstorms NXT Toolbox.                                    *
+% *                                                                                             *
+% *  The RWTH - Mindstorms NXT Toolbox is free software: you can redistribute it and/or modify  *
+% *  it under the terms of the GNU General Public License as published by the Free Software     *
+% *  Foundation, either version 3 of the License, or (at your option) any later version.        *
+% *                                                                                             *
+% *  The RWTH - Mindstorms NXT Toolbox is distributed in the hope that it will be useful,       *
+% *  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS  *
+% *  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.             *
+% *                                                                                             *
+% *  You should have received a copy of the GNU General Public License along with the           *
+% *  RWTH - Mindstorms NXT Toolbox. If not, see <http://www.gnu.org/licenses/>.                 *
+% ***********************************************************************************************
+*/
+
+/**
+* @file motorcontrollerRWTH.nxc
+* * \ingroup motorcontroller
+*
+* @brief Background task and high level routines to control motors.
+*
+* Define NO_CONTROLLER_TASK_SERVICE if you do not need non blocking motor commands
+**/
+
+/*
+   To do: make it smaler
+          targets under 90 make big overshoot!
+   Hisotry: 24800
+            19100 // removed LUT
+
+   History: NO_CONTROLLER_TASK_SERVICE
+            11000
+            5300 // removed LUT
+            4500 // ControllerCore only 1x
+*/
+
+//#define NO_CONTROLLER_TASK_SERVICE
+
+//#define DEBUG_LABVIEW       // debug with computer
+#ifdef DEBUG_LABVIEW
+    #include "algorithm.nxc"
+    #include "com.nxc"
+    bool start0 = false;
+#endif
+
+
+
+// *************** INCLUDES
+#include "MotorControlRWTH/Controller.nxc"
+// Current file structure:
+// + MotorControl.nxc (this file)
+// |-+ Controller.nxc
+//   |-- MotorFunctions.nxc
+//   |-- SpeedFromPosLookup.nxc
+//   |-- ControllerCore.nxc (for Motor A)
+//   |-- ControllerCore.nxc (for Motor B)
+//   |-- ControllerCore.nxc (for Motor C)
+//   |-- ControllerCore.nxc (for sync mode)
+
+
+
+#ifndef NO_CONTROLLER_TASK_SERVICE
+
+/// \cond
+struct typRunMotorParams {
+    int  power;
+    long tacholimit;
+    bool speedreg;
+    bool holdbrake;
+    bool smoothstart;
+    int  turnratio;
+};
+
+typRunMotorParams motorParamsA;
+typRunMotorParams motorParamsB;
+typRunMotorParams motorParamsC;
+typRunMotorParams motorParamsSync;
+
+
+// global!
+byte _g_SyncPorts;
+
+// these semaphores are actually interpreted as "motorArunning", as they are
+// also set and interpreted for synced movements... a bit like the mutexes above
+bool _g_taskArunning;
+bool _g_taskBrunning;
+bool _g_taskCrunning;
+
+
+
+
+task MoveA() {
+    _g_taskArunning = true;
+    bool stoppedByDirectCmd;
+    stoppedByDirectCmd = RunMotorA(OUT_A, motorParamsA.power, motorParamsA.tacholimit, motorParamsA.speedreg, motorParamsA.holdbrake, motorParamsA.smoothstart);
+
+    // if we exited from external NXTMotor.Stop command, we might've overwritten
+    // the power value before exiting the main controller loop, so restore defined
+    // end state here again:
+    if (stoppedByDirectCmd) {
+        if (MotorRegulation(OUT_A) == OUT_REGMODE_SPEED) {
+            MotorBrake(OUT_A);
+        } else {
+            MotorOff(OUT_A);
+        }
+    }
+    _g_taskArunning = false;
+}
+
+
+task MoveB() {
+    _g_taskBrunning = true;
+    bool stoppedByDirectCmd;
+    stoppedByDirectCmd = RunMotorB(OUT_B, motorParamsB.power, motorParamsB.tacholimit, motorParamsB.speedreg, motorParamsB.holdbrake, motorParamsB.smoothstart);
+
+    // if we exited from external NXTMotor.Stop command, we might've overwritten
+    // the power value before exiting the main controller loop, so restore defined
+    // end state here again:
+    if (stoppedByDirectCmd) {
+        if (MotorRegulation(OUT_B) == OUT_REGMODE_SPEED) {
+            MotorBrake(OUT_B);
+        } else {
+            MotorOff(OUT_B);
+        }
+    }
+    _g_taskBrunning = false;
+}
+
+
+task MoveC() {
+    _g_taskCrunning = true;
+    bool stoppedByDirectCmd;
+    stoppedByDirectCmd = RunMotorC(OUT_C, motorParamsC.power, motorParamsC.tacholimit, motorParamsC.speedreg, motorParamsC.holdbrake, motorParamsC.smoothstart);
+
+    // if we exited from external NXTMotor.Stop command, we might've overwritten
+    // the power value before exiting the main controller loop, so restore defined
+    // end state here again:
+    if (stoppedByDirectCmd) {
+        if (MotorRegulation(OUT_C) == OUT_REGMODE_SPEED) {
+            MotorBrake(OUT_C);
+        } else {
+            MotorOff(OUT_C);
+        }
+    }
+    _g_taskCrunning = false;
+}
+
+
+task MoveSync() {
+    bool stoppedByDirectCmd;
+
+    if (_g_SyncPorts == 3) { // OUT_AB
+            _g_taskArunning = true;
+            _g_taskBrunning = true;
+            stoppedByDirectCmd = RunMotor2(OUT_A, motorParamsSync.power, motorParamsSync.tacholimit, false, motorParamsSync.holdbrake, motorParamsSync.smoothstart, OUT_B);
+            if (stoppedByDirectCmd) {
+                if (MotorRegulation(OUT_A) == OUT_REGMODE_SPEED) {
+                    MotorBrake2(OUT_A, OUT_B);
+                } else {
+                    MotorOff2(OUT_A, OUT_B);
+                }
+            }
+            _g_taskArunning = false;
+            _g_taskBrunning = false;
+    } else if (_g_SyncPorts == 4) { // OUT_AC
+            _g_taskArunning = true;
+            _g_taskCrunning = true;
+            stoppedByDirectCmd = RunMotor2(OUT_A, motorParamsSync.power, motorParamsSync.tacholimit, false, motorParamsSync.holdbrake, motorParamsSync.smoothstart, OUT_C);
+            if (stoppedByDirectCmd) {
+                if (MotorRegulation(OUT_A) == OUT_REGMODE_SPEED) {
+                    MotorBrake2(OUT_A, OUT_C);
+                } else {
+                    MotorOff2(OUT_A, OUT_C);
+                }
+            }
+            _g_taskArunning = false;
+            _g_taskCrunning = false;
+    } else if (_g_SyncPorts == 5) { // OUT_BC
+            _g_taskBrunning = true;
+            _g_taskCrunning = true;
+            stoppedByDirectCmd = RunMotor2(OUT_B, motorParamsSync.power, motorParamsSync.tacholimit, false, motorParamsSync.holdbrake, motorParamsSync.smoothstart, OUT_C);
+            if (stoppedByDirectCmd) {
+                if (MotorRegulation(OUT_B) == OUT_REGMODE_SPEED) {
+                    MotorBrake2(OUT_B, OUT_C);
+                } else {
+                    MotorOff2(OUT_B, OUT_C);
+                }
+            }
+            _g_taskBrunning = false;
+            _g_taskCrunning = false;
+    }
+}
+
+/// \endcond
+
+/**
+ * \brief  Checks if move is done.
+ *
+ * \param m   Desired output port: OUT_A, OUT_B, OUT_C
+ * \return    True if move is done.
+*/
+inline bool moveDone(byte m)
+{
+    // check output state info, this is simple
+    if (MotorIsRunning(m)) {
+        return false;
+    } else { // maybe braking or coasting or whatever:
+        switch(m) {
+        case OUT_A:
+            return !(_g_taskArunning);
+            break;
+        case OUT_B:
+            return !(_g_taskBrunning);
+            break;
+        case OUT_C:
+            return !(_g_taskCrunning);
+            break;
+        }
+   }
+}
+
+
+
+
+/// controller mutex for executing commands in the task
+mutex control_mtx;
+
+/// \cond
+
+// Motor Controller Task control variables
+struct sMCT
+{
+   bool action;         // function starts action
+   bool emergencyStop;
+   byte funcType;     // function type
+   byte port;
+};
+sMCT mct;
+
+
+#define PROTO_CONTROLLED_MOTORCMD     1
+#define PROTO_RESET_ERROR_CORRECTION  2
+//#define PROTO_ISMOTORREADY            3
+#define PROTO_CLASSIC_MOTORCMD        4
+//#define PROTO_JUMBOPACKET             5
+
+/// \endcond
+
+/// Start this task before using functions!
+task Motor_Controller_Task()
+{
+   _g_taskArunning = false;
+   _g_taskBrunning = false;
+   _g_taskCrunning = false;
+
+   ResetErrorCorrectionAndBlockCount(OUT_A);
+   ResetErrorCorrectionAndBlockCount(OUT_B);
+   ResetErrorCorrectionAndBlockCount(OUT_C);
+   Wait(1);
+
+   while(true){
+        // any motor command
+        Acquire(control_mtx);
+        if(mct.action) {
+            switch (mct.funcType) {
+
+            // moveRel(...)
+            case PROTO_CONTROLLED_MOTORCMD:
+                if (mct.port == 0) { // OUT_A
+                    if (_g_taskArunning == false) {
+                        start MoveA;
+                    } else {
+                        // implement callback to function?
+                    }
+                } else if (mct.port == 1) { // OUT_B
+                    if (_g_taskBrunning == false) {
+                        start MoveB;
+                    } else {
+                        // implement callback to function?
+                    }
+                } else if (mct.port == 2) { // OUT_C
+                    if (_g_taskCrunning == false) {
+                        start MoveC;
+                    } else {
+                       // implement callback to function?
+                    }
+                } else { // Otherwise (OUT_AB, OUT_AC, OUT_BC, OUT_ABC?)
+                    if (  ((mct.port == 3) && (_g_taskArunning == false) && (_g_taskBrunning == false))
+                       || ((mct.port == 4) && (_g_taskArunning == false) && (_g_taskCrunning == false))
+                       || ((mct.port == 5) && (_g_taskBrunning == false) && (_g_taskCrunning == false)) )  {
+                        start MoveSync;
+                    } else {
+                       // implement callback to function?
+                    }
+                }
+                break;
+
+            // resetErrorCorrection(...)
+            case PROTO_RESET_ERROR_CORRECTION:
+                if (mct.port <= 2) {
+                    ResetErrorCorrectionAndBlockCount(mct.port);
+                } else if (mct.port == 3) { // OUT_AB
+                    ResetErrorCorrectionAndBlockCount(OUT_A);
+                    ResetErrorCorrectionAndBlockCount(OUT_B);
+                } else if (mct.port == 4) { // OUT_AC
+                    ResetErrorCorrectionAndBlockCount(OUT_A);
+                    ResetErrorCorrectionAndBlockCount(OUT_C);
+                } else if (mct.port == 5) { // OUT_BC
+                    ResetErrorCorrectionAndBlockCount(OUT_B);
+                    ResetErrorCorrectionAndBlockCount(OUT_C);
+                } else if (mct.port == 6) { // OUT_ABC
+                    ResetErrorCorrectionAndBlockCount(OUT_A);
+                    ResetErrorCorrectionAndBlockCount(OUT_B);
+                    ResetErrorCorrectionAndBlockCount(OUT_C);
+                }
+                break;
+                
+            case PROTO_CLASSIC_MOTORCMD:
+                // at the moment we want to use only something like OnFwd
+                // this is dirty but we do not want to use extra variables!
+                int power     = motorParamsA.power;
+                int angle     = 0;
+                bool speedreg = motorParamsA.speedreg;
+
+                if (mct.port <= 2) {
+                    // if no current tacholimit and no new one, allow speed change
+                    if ((MotorTachoLimit(mct.port) == 0) && (angle == 0)) {
+                        MotorCmdSingleReset(mct.port, power, angle, speedreg);
+                    } else {
+                        if (moveDone(mct.port)) {
+                            MotorCmdSingleReset(mct.port, power, angle, speedreg);
+                        } else {
+                            // implement callback to function?
+                        }
+                    }
+                } else { // Otherwise (OUT_AB, OUT_AC, OUT_BC, OUT_ABC?)
+                    byte port1;
+                    byte port2;
+                    switch(mct.port) {
+                    case 3: // OUT_AB
+                        port1 = 0;
+                        port2 = 1;
+                        break;
+                    case 4: // OUT_AC
+                        port1 = 0;
+                        port2 = 2;
+                        break;
+                    case 5: // OUT_BC
+                        port1 = 1;
+                        port2 = 2;
+                        break;
+                    }
+
+                    // if no current tacholimit and no new one, allow speed change
+                    if ((MotorTachoLimit(port1) == 0) && (MotorTachoLimit(port2) == 0)  && (angle == 0)) {
+                            //~~~~BEGIN COPY PASTE CODE~~~~~~~~~~~~~~~~~~
+                            //avoid already synced motors (that doesn't work as we know...)
+                            until((MotorRegulation(port1) == OUT_REGMODE_IDLE) && (MotorRegulation(port2) == OUT_REGMODE_IDLE)) {
+                                // repeatedly setting this is not nice, but so
+                                // we don't need a timeout...!
+                                MotorOff2(port1, port2);
+                                // make sure VM applies our settings
+                                Wait(1);
+                            }
+                            MotorCmdDoubleReset(port1, power, angle, port2);
+                            //~~~~END COPY PASTE CODE~~~~~~~~~~~~~~~~~~
+                    } else {
+                        if (moveDone(port1) && moveDone(port2)) {
+                            //~~~~BEGIN COPY PASTE CODE~~~~~~~~~~~~~~~~~~
+                            //avoid already synced motors (that doesn't work as we know...)
+                            until((MotorRegulation(port1) == OUT_REGMODE_IDLE) && (MotorRegulation(port2) == OUT_REGMODE_IDLE)) {
+                                // repeatedly setting this is not nice, but so
+                                // we don't need a timeout...!
+                                MotorOff2(port1, port2);
+                                // make sure VM applies our settings
+                                Wait(1);
+                            }
+                            MotorCmdDoubleReset(port1, power, angle, port2);
+                            //~~~~END COPY PASTE CODE~~~~~~~~~~~~~~~~~~
+                        } else {
+                           // implement callback to function?
+                        }
+                    }
+                } // end else
+                break;
+            } // end switch
+        }//end if(action)
+        mct.action = false;
+        Release(control_mtx);
+
+        if (mct.emergencyStop) {
+            // release all motors
+            MotorOff(OUT_A);
+            MotorOff(OUT_B);
+            MotorOff(OUT_C);
+            PlayTone(440, 500);
+            Wait(10);
+            MotorBrake(OUT_A);
+            MotorBrake(OUT_B);
+            MotorBrake(OUT_C);
+
+            // wait until motor is stable..
+            Wait(1500);
+            mct.emergencyStop = false;
+            Wait(100);
+            // try:
+            stop Motor_Controller_Task;
+            // else:
+            // break;
+            
+            // the emergency function is responsible for shutting down
+            // user should decide how shutting down his program!
+        } //end if
+
+        // this is important to give other tasks some time!
+        // you may change this!
+        #ifndef DEBUG_LABVIEW
+        Wait(10);
+        #else
+        if(start0) {
+           sendNum( MotorTachoCount(OUT_A), 0 , 0);
+           sendNum( MotorPower(OUT_A), 0, 1);
+        }
+        Wait(8);
+        #endif
+    } //end while
+}
+
+
+#endif   // #ifndef NO_CONTROLLER_TASK_SERVICE
+
+
+// into function?
+#ifndef NO_CONTROLLER_TASK_SERVICE
+/**
+ * \brief Wait until last move is done.
+ *
+ * \param m   Desired output port: OUT_A, OUT_B, OUT_C
+*/
+void waitMove(byte m)
+{
+   do {
+      // Let tasks some time..
+      Yield();
+      Wait(15);
+   } while(!moveDone(m));
+}
+#endif
+
+
+/**
+ * \brief Move motor relative.
+ *
+ * \param m            Desired output port: OUT_A, OUT_B, OUT_C
+ * \param pwr          Output power 1%-100%
+ * \param angle        Position in degrees. 0-360
+ * \param speedreg     Speedregulation.
+ * \param holdbrake    Hold brake at end of turn.
+ * \param smoothstart  Ramp up slowly.
+ * \param waitMove_    Wait until move is done. (true = wait)
+*/
+void moveRel(byte m,
+             int pwr,
+             long angle,
+             bool speedreg = true,
+             bool holdbrake = true,
+             bool smoothstart = false,
+             bool waitMove_ = true)
+{
+   // this motorcontroler is a little bit special..
+   pwr *= sign(angle);
+
+
+   #ifndef NO_CONTROLLER_TASK_SERVICE
+
+   Acquire(control_mtx);
+   mct.port = m;
+   switch(mct.port) {
+   case OUT_A:
+      motorParamsA.power = pwr;
+      motorParamsA.tacholimit = angle;
+      motorParamsA.speedreg = speedreg;
+      motorParamsA.holdbrake = holdbrake;
+      motorParamsA.smoothstart = smoothstart;
+      break;
+   case OUT_B:
+      motorParamsB.power = pwr;
+      motorParamsB.tacholimit = angle;
+      motorParamsB.speedreg = speedreg;
+      motorParamsB.holdbrake = holdbrake;
+      motorParamsB.smoothstart = smoothstart;
+      break;
+   case OUT_C:
+      motorParamsC.power = pwr;
+      motorParamsC.tacholimit = angle;
+      motorParamsC.speedreg = speedreg;
+      motorParamsC.holdbrake = holdbrake;
+      motorParamsC.smoothstart = smoothstart;
+      break;
+   default:
+      _g_SyncPorts = m;
+      motorParamsSync.power = pwr;
+      motorParamsSync.tacholimit = angle;
+      motorParamsSync.turnratio = 0; //turnratio;
+      motorParamsSync.speedreg = false; //always for sync!
+      motorParamsSync.holdbrake = holdbrake;
+      motorParamsSync.smoothstart = smoothstart;
+   }
+
+   mct.funcType = PROTO_CONTROLLED_MOTORCMD;
+   mct.action = true;
+   Release(control_mtx);
+
+   // Now let the task some time to acquire the mutex
+   Yield();
+   Wait(10);
+   
+   if(waitMove_)
+      waitMove(m);
+   
+   #else
+   RunMotorA(m,
+             pwr,
+             angle,
+             speedreg,
+             holdbrake,
+             smoothstart);
+   #endif
+}
+
+
+/** Reset error correction and TachoCount.
+ *
+ * This command can be used to reset the NXT's internal error correction
+ * mechanism (i.e. reset the TachoCount property).
+ * The same thing can be achieved using the IO map commands (with the output module).
+ *
+ * \param m    Desired output port: OUT_A, OUT_B, OUT_C
+*/
+void resetErrorCorrection(byte m)
+{
+   #ifndef NO_CONTROLLER_TASK_SERVICE
+   Acquire(control_mtx);
+   mct.funcType = PROTO_RESET_ERROR_CORRECTION;
+   mct.port = m;
+   mct.action = true;
+   Release(control_mtx);
+   Yield();
+   Wait(1);
+
+   #else
+   if (m <= 2) {
+      ResetErrorCorrectionAndBlockCount(m);
+   } else if (m == 3) { // OUT_AB
+      ResetErrorCorrectionAndBlockCount(OUT_A);
+      ResetErrorCorrectionAndBlockCount(OUT_B);
+   } else if (m == 4) { // OUT_AC
+      ResetErrorCorrectionAndBlockCount(OUT_A);
+      ResetErrorCorrectionAndBlockCount(OUT_C);
+   } else if (m == 5) { // OUT_BC
+      ResetErrorCorrectionAndBlockCount(OUT_B);
+      ResetErrorCorrectionAndBlockCount(OUT_C);
+   } else if (m == 6) { // OUT_ABC
+      ResetErrorCorrectionAndBlockCount(OUT_A);
+      ResetErrorCorrectionAndBlockCount(OUT_B);
+      ResetErrorCorrectionAndBlockCount(OUT_C);
+   }
+   #endif
+}
+
+
+/**
+ * \brief Run motor forward.
+ *
+ * Do not use nxc api motor function OnFwd!
+ *
+ * \param m          Desired output port: OUT_A, OUT_B, OUT_C
+ * \param pwr        Output power -100% - 100%
+ * \param speedreg   Speedregulation.
+*/
+void moveFwd(byte m, int pwr, bool speedreg = true)
+{
+   #ifndef NO_CONTROLLER_TASK_SERVICE
+   mct.funcType = PROTO_CLASSIC_MOTORCMD;
+   mct.port = m;
+   // this is dirty but we do not want to use no extra variables!
+   motorParamsA.power = pwr;
+   motorParamsA.speedreg = speedreg;
+   Acquire(control_mtx);
+   mct.action = true;
+   Release(control_mtx);
+   Yield();
+   Wait(1);
+   
+   #else
+   // not implemented yet, OnFwd should work
+ #endif
+}
+
+
+/**
+ * \brief Stop and break motor.
+ *
+ * Do not use nxc api motor function Off!
+ *
+ * \param m          Desired output port: OUT_A, OUT_B, OUT_C
+*/
+void motorOff(byte m)
+{
+   #ifndef NO_CONTROLLER_TASK_SERVICE
+   Acquire(control_mtx);
+   mct.action = false;
+   Release(control_mtx);
+   OffEx(m, RESET_NONE);
+   #else
+   // not implemented yet, OffEx should work
+   #endif
+}
+
+
+/**
+ * \brief Run motor reverse.
+ *
+ * Do not use nxc api motor function OnFwd!
+ *
+ * \param m          Desired output port: OUT_A, OUT_B, OUT_C
+ * \param pwr        Output power -100% - 100%
+ * \param speedreg   Speedregulation.
+*/
+void moveRev(byte m, int pwr, bool speedreg = true)
+{
+   #ifndef NO_CONTROLLER_TASK_SERVICE
+   Acquire(control_mtx);
+   mct.funcType = PROTO_CLASSIC_MOTORCMD;
+   mct.port = m;
+   // this is dirty but we do not want to use no extra variables!
+   motorParamsA.power = -pwr;
+   motorParamsA.speedreg = speedreg;
+   mct.action = true;
+   Release(control_mtx);
+   Yield();
+   Wait(1);
+   #else
+   // not implemented yet, OnFwd should work
+   #endif
+}
+
+
+/**
+ * \brief Reset the motor.
+ *
+ * Reset the motor by turning until stalling.
+ * Be aware of using this function.
+ *
+ * \param m      Desired output port. Can be a constant or a variable,
+ *               see Output port constants.
+ * \param pwr    Output power, from -50 to +50, use the sign for direction.
+ *
+*/
+void resetMotor(byte m, char pwr)
+{
+   long tacho_now, tacho_prev;
+
+   // power limiting (anything above this level would be dangerous)
+   if(pwr > 50)
+      pwr = 50;
+   if(pwr < -50)
+      pwr = -50;
+
+   #ifndef NO_CONTROLLER_TASK_SERVICE
+   Acquire(control_mtx);
+   mct.action = false;
+   resetErrorCorrection(m);
+   #else
+   resetErrorCorrection(m);
+   #endif
+   Wait(10);
+   
+   OnFwdEx(m, pwr, RESET_NONE);
+   tacho_now = MotorTachoCount(m);
+   do {
+      Wait(200);
+      tacho_prev = tacho_now;
+      tacho_now = MotorTachoCount(m);
+   } while(tacho_now != tacho_prev);
+   resetErrorCorrection(m);
+   Wait(200);
+   
+   #ifndef NO_CONTROLLER_TASK_SERVICE
+   Release(control_mtx);
+   Yield();
+   Wait(1);
+   #endif
+}
+
+#ifndef NO_CONTROLLER_TASK_SERVICE
+/**
+ * \brief Stop (all) motors and shut down motor controller.
+ *
+ * This function will immediately brake the motors and shut down the motor-controller-task.
+ * If you set shutDown to false the program will continue but some motor control tasks
+ * will not shut down immediately.
+*/
+void motorEmergencyStop(bool shutDown = true)
+{
+  // highest priority, cancle any commands
+   Acquire(control_mtx);
+   mct.action = false;
+   Release(control_mtx);
+   
+   mct.emergencyStop = true;
+   while(mct.emergencyStop) {
+      Yield();
+      Wait(100);
+   }
+   if(shutDown)
+      StopAllTasks();
+}
+#endif
+
+
+

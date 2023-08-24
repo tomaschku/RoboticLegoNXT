@@ -1,0 +1,42 @@
+#define Antrieb OUT_BC //Beide Antriebe, Links & Rechts
+#define Links OUT_C //Von hinten aus gesehen, Links
+#define Rechts OUT_B //Von hinten aus gesehen, Rechts
+#define Stachel OUT_A //Motor vom Stachel
+#define Ulraschall IN_2 //Anschluss vom Utraschall
+#define Stachel_Touch IN_1 //Sensor am Stachel
+
+int count;
+
+task beep() {
+ while(true) {
+  if(Sensor(Stachel_Touch) == 1) {
+   ClearScreen();
+   TextOut(5, 36, "Wie es aussieht");
+   TextOut(5, 28, "      dich!");
+   PlayTone(TONE_FS7, 400); //Orig. Frequenz: 3000; FS7: 2960
+  }
+ }
+}
+
+task main() {
+ ClearScreen();
+ SetSensorTouch(Stachel_Touch);
+ SetSensorLowspeed(Ulraschall);
+ StartTask(beep);
+ 
+ while(true) {
+  TextOut(0, 36, " Wen erwischt es");
+  TextOut(0, 28, "   denn heute?");
+  OnFwd(Antrieb, 75);
+  Wait(200);
+  if(SensorUS(Ulraschall) < 20) {
+   Off(Antrieb);
+   OnFwd(Stachel, 100);
+   Wait(250);
+   OnRev(Stachel, 50);
+   Wait(750);
+   Off(Stachel);
+   OnRev(Stachel, 15); //Damit der Stachel nicht nach vorne fällt
+  }
+ }
+}

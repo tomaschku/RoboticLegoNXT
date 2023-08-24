@@ -1,0 +1,45 @@
+
+#include "motorcontrollerRWTH.nxc"
+
+task main()
+{
+   // initializing is done in task
+   start Motor_Controller_Task;
+   // Let the Task some time to start up
+   Yield();
+   Wait(10);
+   
+   // normal motor functions
+   moveFwd(OUT_A, 50);
+   Wait(1000);
+
+   motorOff(OUT_A);
+   Wait(1000);
+
+   moveRev(OUT_A, 50);
+   Wait(1000);
+
+   motorOff(OUT_A);
+
+   Wait(2000);
+
+   moveRel(OUT_A, 75, 180);
+   Wait(500);
+   // with smoothstart and not blocking
+   moveRel(OUT_A, -75, 360, true, true, true , false);
+
+   TextOut(0, LCD_LINE1, "Do some stuff");
+
+   // now wait until motor rdy
+   waitMove(OUT_A);
+
+   TextOut(0, LCD_LINE2, "Ready for next move");
+
+
+   // shut down controller
+   stop Motor_Controller_Task;
+   // set motor into stable mode
+   Off(OUT_A);
+
+   Wait(1000);
+}

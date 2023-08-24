@@ -1,0 +1,321 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Motor.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#ifndef _MOTOR_H_
+#define _MOTOR_H_
+
+#include "PID.nxc"
+#include "Screen.nxc"
+
+/**
+ * \file Motor.nxc
+ * \brief Motor control implementation
+ */
+
+/**
+ * \brief Starts the given motor with the given power
+ */
+inline void MotorStart(int motor, int power)
+{
+     SetOutput(motor,
+               OutputMode, OUT_MODE_MOTORON | OUT_MODE_BRAKE,
+               Power, power,
+               UpdateFlags, UF_UPDATE_MODE | UF_UPDATE_SPEED | UF_UPDATE_RESET_BLOCK_COUNT,
+               RunState, OUT_RUNSTATE_RUNNING);
+}
+
+/**
+ * \brief Stops the given motor
+ */
+inline void MotorStop(int motor)
+{
+     SetOutput(motor,
+               OutputMode, OUT_MODE_BRAKE,
+               Power, 0,
+               UpdateFlags,  UF_UPDATE_MODE | UF_UPDATE_SPEED,
+               RunState, OUT_RUNSTATE_IDLE);
+}
+
+/**
+ * \brief Set the power of given motor
+ */
+inline void MotorSetPower(int motor, int power)
+{
+     SetOutput(motor, Power, power, UpdateFlags, UF_UPDATE_SPEED);
+}
+
+/**
+ * \brief Starts the given 2 motors in synchronous mode with with the given
+ * initial power.
+ *
+ * Synchronous mode keeps the two motors go with the same
+ * rotation counts -- effectively keeping the drive go straight line.
+ */
+inline void MotorStartSync(int motor1, int motor2, int power)
+{
+     int motors[];
+     ArrayBuild(motors, motor1, motor2);
+
+     SetOutput(motors,
+               OutputMode, OUT_MODE_MOTORON | OUT_MODE_BRAKE | OUT_MODE_REGULATED,
+               Power, power,
+               TurnRatio, 0,
+               RegMode, OUT_REGMODE_SYNC,
+               UpdateFlags, UF_UPDATE_MODE | UF_UPDATE_SPEED | UF_UPDATE_RESET_BLOCK_COUNT,
+               RunState, OUT_RUNSTATE_RUNNING);
+}
+
+/**
+ * \brief Stops the given two motor pair
+ */
+inline void MotorStopSync(int motor1, int motor2)
+{
+     int motors[];
+     ArrayBuild(motors, motor1, motor2);
+     SetOutput(motors,
+               OutputMode, OUT_MODE_BRAKE,
+               Power, 0,
+               UpdateFlags,  UF_UPDATE_MODE | UF_UPDATE_SPEED,
+               RunState, OUT_RUNSTATE_IDLE);
+}
+
+/**
+ * \brief Sets the power of the given motor pair
+ */
+inline void MotorSetPowerSync(int motor1, int motor2, int power)
+{
+     int motors[];
+     ArrayBuild(motors, motor1, motor2);
+     SetOutput(motors, Power, power, UpdateFlags, UF_UPDATE_SPEED);
+}
+
+/**
+ * \brief Sets the turn ratio of the given motor pair running in synchronous
+ * mode.
+ */
+inline void MotorSetTurnRatio(int motor1, int motor2, int turnRatio)
+{
+     int motors[];
+     ArrayBuild(motors, motor1, motor2);
+     SetOutput(motors, TurnRatio, turnRatio);
+}
+
+/**
+ * \brief Sets the turn ratio and power at the same time of the given motor
+ * pair running in synchronous mode.
+ */
+inline void MotorSetTurnRatioPower(int motor1, int motor2, int turnRatio, int power)
+{
+     int motors[];
+     ArrayBuild(motors, motor1, motor2);
+     SetOutput(motors, TurnRatio, turnRatio, Power, power, UpdateFlags, UF_UPDATE_SPEED);
+}
+
+/**
+ * \brief Rotates the given motor by given angle using the specified P, I
+ * and D gain values. The power is the maximum power to use for rotation.
+ */
+int MotorRotateAngle(int motor, int power, long angle,
+                     long PValue, long IValue, long DValue)
+{
+     int samplingPeriod = 20; /* msec */
+     long motorTacho, output, lastError;
+     PIDControl pidControl;
+
+     PIDControlInit(pidControl,
+                    1000,     /* PID scale */
+                    PValue,
+                    IValue,
+                    DValue,
+                    5,        /* Steady state counts threshold */
+                    2,        /* Output gain */
+                    power);   /* Output absolute maximum */
+
+     /* Speed is evaluated in the loop below */
+     MotorStart(motor, 0);
+
+     PIDControlSetPoint(pidControl, angle);
+
+     while(!PIDControlCheckEnd(pidControl))
+     {
+         motorTacho = GetOutput(motor, BlockTachoCount);
+         output = PIDControlStep(pidControl, motorTacho);
+         MotorSetPower(motor, output);
+         Wait(samplingPeriod);
+     }
+     MotorStop(motor);
+     lastError = PIDControlGetLastError(pidControl);
+     return lastError;
+}
+
+/**
+ * \brief Rotates the given pair of motors synchromously (that is they rotate
+ * at the same pace) by given angle using the specified P, I
+ * and D gain values. The power is the maximum power to use for rotation.
+ */
+int MotorRotateAngleSync(int motor1, int motor2, int power, long angle,
+                         long PValue, long IValue, long DValue)
+{
+     int samplingPeriod = 20; /* msec */
+     long motorTacho, output, lastError;
+     PIDControl pidControl;
+
+     PIDControlInit(pidControl,
+                    1000,     /* PID scale */
+                    PValue,
+                    IValue,
+                    DValue,
+                    5,        /* Steady state counts threshold */
+                    2,        /* Output gain */
+                    power);   /* Output absolute maximum */
+
+     /* Speed is evaluated in the loop below */
+     MotorStartSync(motor1, motor2, 0);
+
+     PIDControlSetPoint(pidControl, angle);
+
+     while(!PIDControlCheckEnd(pidControl))
+     {
+         motorTacho = GetOutput(motor1, BlockTachoCount);
+         output = PIDControlStep(pidControl, motorTacho);
+         MotorSetPowerSync(motor1, motor2, output);
+         Wait(samplingPeriod);
+     }
+     MotorStopSync(motor1, motor2);
+     lastError = PIDControlGetLastError(pidControl);
+     return lastError;
+}
+
+/**
+ * \brief Rotates the given pair of motors differentially (that is they rotate
+ * at the same pace in opposite direction) by given angle using the specified
+ * P, I and D gain values. The power is the maximum power to use for rotation.
+ */
+int MotorRotateAngleDiff(int motor1, int motor2, int power, long angle,
+                                 long PValue, long IValue, long DValue)
+{
+     int samplingPeriod = 20; /* msec */
+     long motorTacho, output, lastError;
+     PIDControl pidControl;
+
+     PIDControlInit(pidControl,
+                    1000,     /* PID scale */
+                    PValue,
+                    IValue,
+                    DValue,
+                    5,        /* Steady state counts threshold */
+                    1,        /* Output gain */
+                    power);   /* Output absolute maximum */
+     PIDControlSetIntegralLimit(pidControl, 20);
+     
+     /* Speed is evaluated in the loop below */
+     MotorStartSync(motor1, motor2, 0);
+     
+     if (angle > 0)
+         MotorSetTurnRatio(motor1, motor2, -100);
+     else
+         MotorSetTurnRatio(motor1, motor2, +100);
+
+     PIDControlSetPoint(pidControl, angle);
+
+     while(!PIDControlCheckEnd(pidControl))
+     {
+         motorTacho = GetOutput(motor1, BlockTachoCount);
+         output = PIDControlStep(pidControl, motorTacho);
+
+         if (output > 0)
+             MotorSetTurnRatioPower(motor1, motor2, -100, output);
+         else
+             MotorSetTurnRatioPower(motor1, motor2, +100, output);
+
+         Wait(samplingPeriod);
+     }
+     MotorStopSync(motor1, motor2);
+     MotorSetTurnRatio(motor1, motor2, 0);
+     lastError = PIDControlGetLastError(pidControl);
+     return lastError;
+}
+
+/* Test */
+
+#define TEST_ANGLE 180
+
+task TestMotorRotate ()
+{
+     MotorRotateAngle(OUT_B, 100, TEST_ANGLE, 450, 0, 0);
+}
+
+task TestMotorRotateSync ()
+{
+     MotorRotateAngleSync(OUT_B, OUT_C, 100, TEST_ANGLE, 450, 0, 0);
+}
+
+task TestMotorRotateDiff ()
+{
+     MotorRotateAngleDiff(OUT_B, OUT_C, 100, TEST_ANGLE, 250, 0, 0);
+}
+
+void TestPID()
+{
+     Plotter pe;
+
+     ClearScreen();
+     PlotterInit(pe, PLOT_TYPE_LINE, 0, 100, -180, 180);
+
+     int motor = OUT_B;
+     start TestMotorRotateSync;
+
+     int t;
+     while (1)
+     {
+          int error = (TEST_ANGLE - GetOutput(OUT_B, TachoCount)) * 32 / TEST_ANGLE;
+          PlotterPlot(pe, t, error);
+          Wait(20);
+          t++;
+          if (t >= 100)
+          {
+              t = 0;
+              Wait(50000);
+              break;
+          }
+     }
+}
+
+#if 0
+task main()
+{
+/*
+    MotorStartSync(OUT_B, OUT_C, 30);
+    Wait(2000);
+
+    MotorSetPowerSync(OUT_B, OUT_C, 70);
+    Wait(5000);
+
+    MotorStopSync(OUT_B, OUT_C);
+    Wait(3000);
+*/
+    start TestMotorRotateDiff;
+    TestPID();
+    Wait(20000);
+}
+#endif
+
+#endif
+

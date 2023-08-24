@@ -1,0 +1,175 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    RandomNorm.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+                       Daniele Benedettelli   <danielebenedettelli@gmail.com>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/**
+ * \file RandomNorm.nxc
+ * \brief Normally distributed (Gaussian distribution) random number function
+ */
+
+/* Normally distributed random numbers with mean 0 and variance 1, scaled by
+ * 100 to fit in integer. 256 samples.
+ */
+
+#ifndef __RANDOM_NORM_H_
+#define __RANDOM_NORM_H_
+
+int nRandSamples[] = {
+9, -95, -118, 27, -148, 0, 114, 39, -104, 208, 196, 22, -5, 0, -113, -126,
+33, -11, 131, 50, -40, 175, -140, 292, -73, 68, -8, -46, -118, 95, -32, 79,
+164, 138, 41, 16, -48, -32, -70, 20, -30, -169, 26, 64, -36, -76, -81, 201,
+-80, -61, 0, -39, -108, 23, -59, -6, 35, 153, -15, -112, -9, 32, 151, -52,
+-38, 28, 24, -24, -216, -12, -49, -2, -18, 133, 10, 77, -58, -240, -189, -36,
+98, 98, 50, 131, 2, 0, -57, 108, -185, 30, -12, 43, 48, 89, 22, 21,
+-63, -14, -6, 23, -58, 1, -86, -136, 174, -27, -97, 38, -178, 51, -80, 141,
+-43, 49, 172, -112, 79, 64, 101, 23, -62, -242, 4, 152, 13, -201, 158, 60,
+47, -66, 19, -70, 9, -125, 56, 11, -52, 90, -161, 167, 49, -77, -199, 91,
+52, 203, -81, 26, -23, 45, 59, -20, 4, 32, -161, -4, -101, 118, 218, 47,
+19, 114, 17, -146, -87, 26, 93, -102, 101, -18, 79, 59, 27, -28, -62, 175,
+62, 19, 277, -87, -99, 33, 29, 131, -43, -88, -68, -31, -79, -120, 93, -121,
+-59, -99, 35, -72, 56, 149, 37, -5, 32, 53, 11, -13, -136, 66, -185, -62,
+138, 0, -8, 147, 41, -160, 82, -128, 59, 80, 106, 4, -196, 23, 111, -91,
+-7, 45, 134, 78, 185, 44, -17, -41, 16, 100, 93, -20, -140, 113, 39, 102,
+4, -72, -91, 183, 113, -191, 73, -26, -67, -91, -79, -217, 59, 12, 69, -117,
+};
+
+int lastNrandIndex = 0;
+
+/**
+ * \brief Returns a random number sample from Guassian distribution scaled
+ * by the given factor (using lookup table).
+ *
+ * The returned sample (before scaling) has mean 0 and variance 1 (standard
+ * normal distribution). Okay. it's fake random number
+ * from a pre-computed table that will repeat every 256 samples, but it is
+ * very fast and should suffice for many simulation purpose on nxt.
+ */
+int RandomNorm(int scale)
+{
+    lastNrandIndex++;
+    if (lastNrandIndex > 255)
+        lastNrandIndex = 0;
+    return (nRandSamples[lastNrandIndex] * scale) / 100;
+}
+
+/**
+ * \brief Returns a random number sample from Guassian distribution scaled
+ * by the given factor (using sum of uniformly distributed random numbers).
+ *
+ * The returned sample (before scaling) has mean 0 and variance 1.
+ * A set of uniformly distributed random numbers are added to get a normally
+ * distributed sample. According to central limit theory, the resulting samples
+ * are normally distributed, given enough random samples are used in the sum.
+ * This function uses 12 samples which is considered good enough for most
+ * purposes.
+ */
+long RandomNorm2(int scale)
+{
+   long nr = -600;
+   for (int i = 0; i < 12; i++)
+   {
+       nr += Random(100);
+   }
+   return ((nr * scale)/100);
+}
+
+/**
+ * \brief Returns a random number sample from Guassian distribution scaled
+ * by the given factor (using sum of uniformly distributed random numbers).
+ *
+ * This function is same as RandomNorm2() except the precision allows adding
+ * more samples (multiple of 12) to get higher accuracy.
+ */
+long RandomNorm3(int scale, int precision)
+{
+   int iter = precision * 12;
+   long s;
+   long nr = (-iter * 100)/2;
+   for (int i = 0; i < iter; i++)
+   {
+       nr += Random(100);
+   }
+   s = (10000 * iter)/12;
+   s = Sqrt(s);
+   return ((nr * scale)/s);
+}
+
+/* #define ENABLE_TEST */
+
+#ifdef ENABLE_TEST
+
+/* return maximum value in array */
+int ArrayMax(long v[])
+{
+    int len = ArrayLen(v);
+    int max = 0;
+    for(int i = 0; i < len; i++)
+    {
+        if (v[i] > max) max = v[i];
+    }
+    return max;
+}
+
+#define HIST 30
+#define SAMPLES 5000
+void TestRandomNorm ()
+{
+    long r;
+    long stat[HIST];
+    int progressbar, zone;
+    int i, x, w, h, max;
+
+    TextOut(0,LCD_LINE1,"Normal Samples");
+    for (i = 0; i < SAMPLES; i++)
+    {
+        progressbar = (100 * i) / SAMPLES;
+        LineOut(0, LCD_LINE2 + 4, progressbar, LCD_LINE2 + 4);
+        LineOut(0, LCD_LINE2 + 3, progressbar, LCD_LINE2 + 3);
+        r = RandomNorm3(100,2);
+
+        /* build histogram */
+        for (zone = 0; zone < HIST; zone++)
+        {
+            /* 3-sigma confidence */
+            if (-300 + zone * 600 / HIST <= r & r < -300 + (zone + 1) * 600 / HIST)
+                stat[zone]++;
+        }
+    }
+
+    ClearScreen();
+    max = ArrayMax(stat);
+    w = 100/HIST - 1;
+    for (zone = 0; zone < HIST; zone++)
+    {
+        x = (100 * zone)/HIST;
+        h = (63 * stat[zone])/max;
+        RectOut(x, 0, w, h);
+    }
+    while(true);
+}
+/*
+task main()
+{
+    TestRandomNorm();
+}
+*/
+#endif /* ENABLE_TEST */
+#endif /* __RANDOM_NORM_H_ */
+

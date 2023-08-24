@@ -1,0 +1,101 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Debug.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/**
+ * \file Debug.nxc
+ * \brief Debugging utility macros
+ *
+ * To use the debugging utility macros, define ENABLE_DEBUG somewhere before
+ * including this file and use ASSERT() or WARNING() macros within function
+ * definitions (especially, in the begining of function definitions to assert
+ * input arguments' sanity). If ENABLE_DEBUG is not defined, they do nothing
+ * and the code will be free of any debugging overheads.
+ *
+ * Same goes for TEST() macro. Define ENABLE_TEST somewhere before including
+ * this file and use the macro to verify test results.
+ */
+#ifndef __DEBUG_H_
+#define __DEBUG_H_
+
+#ifdef ENABLE_DEBUG
+
+/**
+ * \macro ASSERT(exp, mesg)
+ * \brief Asserts if (exp) evaluates to true. If not, a critical message
+ * 'mesg' is shown and program halts after 5 secs. This macro does nothing
+ * if ENABLE_DEBUG is not defined.
+ */
+#define ASSERT(exp, mesg) \
+    if (!(exp)) \
+    {                                                         \
+        ClearScreen();                                        \
+        TextOut(0, LCD_LINE1, "Critical assertion failed:");  \
+        TextOut(0, LCD_LINE2, mesg);                          \
+        Wait(5000);                                           \
+        StopAllTasks();                                       \
+    }
+
+/**
+ * \brief Warns if (exp) does not evaluate to true. A message 'mesg' is
+ * shown on the screen and everything continues. This macro does nothing
+ * if ENABLE_DEBUG is not defined.
+ */
+#define WARNING(exp, mesg) \
+    if (!(exp))                                              \
+    {                                                        \
+        ClearScreen();                                       \
+        TextOut(0, LCD_LINE1, "Warning assertion failed:");  \
+        TextOut(0, LCD_LINE2, mesg);                         \
+    }
+#else
+  #define ASSERT(x, mesg)
+  #define WARNING(x, mesg)
+#endif
+
+#ifdef ENABLE_TEST
+
+/**
+ * \brief Asserts if (exp) evaluates to true. If not, a critical message
+ * 'mesg' is shown and program halts after 5 secs. (exp) should be a test
+ * verification assertion. This macro does nothing if ENABLE_TEST is not
+ * defined.
+ */
+#define TEST(exp, mesg) \
+    if (!(exp))                                              \
+    {                                                        \
+        ClearScreen();                                       \
+        TextOut(0, LCD_LINE1, "Test failed:");               \
+        TextOut(0, LCD_LINE2, mesg);                         \
+        Wait(5000);                                          \
+        StopAllTasks();                                      \
+    }
+#else
+  #define TEST(x, mesg)
+#endif
+
+void TestDebug()
+{
+    ASSERT(1==2, "1 is not equal to 2");
+    WARNING(1==2, "1 is not equal to 2");
+    TEST(1==2, "1 is not equal to 2");
+}
+
+#endif
+

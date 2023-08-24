@@ -1,0 +1,11 @@
+<area shape="rect" href="$_debug_8nxc.html" title="Debugging utility macros." alt="" coords="197,453,280,480">
+<area shape="rect" href="$_angle_8nxc.html" title="Provides simple arithmetic for absolute and relative angles." alt="" coords="147,229,227,256">
+<area shape="rect" href="$_vector_8nxc.html" title="A simple 3&#45;components vector implementation (2D point + direction)." alt="" coords="324,304,407,331">
+<area shape="rect" href="$_circle_8nxc.html" title="Circle geometry operations." alt="" coords="43,229,123,256">
+<area shape="rect" href="$_odometer2_8nxc.html" title="Implements odometery for 2 wheels drive robot base using motor tachometers." alt="" coords="265,80,375,107">
+<area shape="rect" href="$_motor_8nxc.html" title="Motor control implementation." alt="" coords="417,80,497,107">
+<area shape="rect" href="$_robot_prima_8nxc.html" title="An experimental robotic platform for developing this library." alt="" coords="521,80,636,107">
+<area shape="rect" href="$_matrix_8nxc.html" title="Integer matrix implementation. Provides matrix algebra, cofactor, adjugate and inverse..." alt="" coords="352,379,435,405">
+<area shape="rect" href="$_map_8nxc.html" title="A 2D map implementation that holds a set of landmark objects." alt="" coords="307,155,379,181">
+<area shape="rect" href="$_screen_8nxc.html" title="Display functions for text and graphs." alt="" coords="453,229,541,256">
+<area shape="rect" href="$_p_i_d_8nxc.html" title="Generic PID controller implementation." alt="" coords="504,155,571,181">

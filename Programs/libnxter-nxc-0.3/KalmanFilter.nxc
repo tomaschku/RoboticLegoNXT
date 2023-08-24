@@ -1,0 +1,324 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    KalmanFilter.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#ifndef _KALMAN_FILTER_H_
+#define _KALMAN_FILTER_H_
+
+//#define ENABLE_DEBUG
+//#define ENABLE_TEST
+
+#include "Debug.nxc"
+#include "Matrix.nxc"
+#include "RandomNorm.nxc"
+
+#define KALMAN_GAIN_PRECISION 1000   /* gain precision */
+
+/**
+ * \file KalmanFilter.nxc
+ * \brief Kalman Filter implementation for multidimentional state vector
+ */
+
+/**
+ * \brief Kalman Filter class representing the kalman model and state updates.
+ * In practice, upto only 3 dimentional state vector is usable before hitting
+ * hardware limitation.
+ */
+struct KalmanFilter
+{
+    Matrix X; /**< Current estimated system state */
+    Matrix A; /**< State transformation model for state transition */
+    Matrix B; /**< Control input transformation for state transition */
+    Matrix H; /**< State observation model transformation */
+    Matrix Q; /**< State transition noise covariance matrix */
+    Matrix R; /**< Observation noise covariance matrix */
+    Matrix P; /**< Estimated state error covariance (i.e. accuracy of the estimation */
+    Matrix K; /**< Kalman Gain. It is scaled by Ks for integer operations */
+    long Ks;  /**< Kalman gain scale factor */
+    bool unityModel; /**< Is the filter working in unity mode. i.e. if A = B = H = 1 */
+};
+
+/**
+ * \brief Initializes the kalman filter with given paramters. matrix A is the
+ * state transition model, matrix B is the input transformation model, matrix H
+ * is the obervation transformation model, matrix Q is the state transition
+ * uncertainity covariance, matrix R is obervation uncertainity covariance,
+ * matrix P0 is the initial state (X0) error covariance (i.e. accuracy of the
+ * initially choose state) and matrix X0 is the initially decided state.
+ */
+void KalmanFilterInit(KalmanFilter &filter, Matrix &A, Matrix &B, Matrix &H,
+                      Matrix &Q, Matrix &R, Matrix &P0, Matrix &X0)
+{
+    filter.unityModel = false;
+    filter.A = A;
+    filter.B = B;
+    filter.H = H;
+    filter.Q = Q;
+    filter.R = R;
+    filter.P = P0;
+    filter.X = X0;
+}
+
+/**
+ * \brief Initializes the kalman filter in unity mode with given paramters.
+ * Unity mode runs the filter with the assumption A = B = H = 1. This skips
+ * many of the matrix operations and can make the filter run faster. It is
+ * better to use this mode in certain cases where state X, observation Z
+ * and control U are all in the same dimension. matrix Q is the state
+ * transition uncertainity covariance, matrix R is obervation uncertainity
+ * covariance, matrix P0 is the initial state (X0) error covariance (i.e.
+ * accuracy of the initially choose state) and matrix X0 is the initially
+ * choosen state.
+ */
+void KalmanFilterInitUnity(KalmanFilter &filter, Matrix &Q, Matrix &R,
+                           Matrix &P0, Matrix &X0)
+{
+    filter.unityModel = true;
+    filter.Q = Q;
+    filter.R = R;
+    filter.P = P0;
+    filter.X = X0;
+}
+
+/**
+ * \brief Gets the current estimated state in the filter and returns it in X.
+ */
+inline void KalmanFilterGetX(KalmanFilter &filter, Matrix &X)
+{
+    X = filter.X;
+}
+
+/**
+ * \brief Gets the current error covariance of the current estimated state
+ * in the filter and returns it in P. Error covariance is defines the accuracy
+ * of the estimated state X.
+ */
+inline void KalmanFilterGetP(KalmanFilter &filter, Matrix &P)
+{
+    P = filter.P;
+}
+
+/**
+ * \brief Runs the filter step. matrix U is the current state control input
+ * and matrix Z is the current observation of the state. Control input U and
+ * obsevation Z will be transformed by matrix B and matrix H respectively
+ * before contributing to the final state transition.
+ */
+void KalmanFilterStep(KalmanFilter &filter, Matrix &U, Matrix &Z)
+{
+    Matrix BU, Xp, Yr, tmpV;
+    Matrix Pp, Sr, tmpM;
+    
+    if (filter.unityModel)   /* A = B = H = I */
+    {
+        /* Predict step Xp = X + U */
+        Xp = filter.X;
+        MatrixAdd(Xp, U);
+
+        /* Predict step: Pp = P + Q */
+        Pp = filter.P;
+        MatrixAdd(Pp, filter.Q);
+
+        /* Measurement residual: Yr = Z - Xp */
+        Yr = Z;
+        MatrixSubtract(Yr, Xp);
+
+        /* Residual covariance: Sr = Pp + R */
+        Sr = Pp;
+        MatrixAdd(Sr, filter.R);
+
+        /* (Optimal) K = Pp * Inv(Sr) */
+        filter.Ks = MatrixInverse(Sr, KALMAN_GAIN_PRECISION,
+                                  tmpM);        /* Sr = Inv(Sr) */
+        MatrixMultiply(Pp, tmpM, filter.K);     /* K = Pp * Inv(Sr) */
+    }
+    else  /* Complete model */
+    {
+        /* Predict step: Xp = A * X + B * U */
+
+        MatrixMultiply(filter.B, U, BU);        /* BU = B * U */
+        MatrixMultiply(filter.A, filter.X, Xp); /* Xp = A * X */
+        MatrixAdd(Xp, BU);                      /* Xp = A * X + B * U */
+
+        /* Predict step: Pp = A * P * T(A) + Q */
+
+        MatrixMultiply(filter.A, filter.P, Pp); /* Pp = A * P */
+        MatrixTranspose(filter.A);              /* A = T(A) */
+        MatrixMultiply(Pp, filter.A, tmpM);     /* Pp = A * P * T(A) */
+        Pp = tmpM;
+        MatrixAdd(Pp, filter.Q);                /* Pp = A * P * T(A) + Q */
+        MatrixTranspose(filter.A);              /* Restore original A */
+
+        /* Measurement residual: Yr = Z - H * Xp */
+
+        MatrixMultiply(filter.H, Xp, tmpV);    /* tmp = H * Xp */
+        Yr = Z;
+        MatrixSubtract(Yr, tmpV);               /* Yr = Z - H * Xp */
+
+        /* Residual covariance: Sr = H * Pp * T(H) + R */
+        
+        MatrixMultiply(filter.H, Pp, Sr);       /* Sr = H * Pp */
+        MatrixTranspose(filter.H);              /* H = T(H) */
+        MatrixMultiply(Sr, filter.H, tmpM);     /* Sr = H * Pp * T(H) */
+        Sr = tmpM;
+        MatrixAdd(Sr, filter.R);                /* Sr = H * Pp * T(H) + R */
+
+        /* (Optimal) K = Pp * T(H) * Ks * Inv(Sr) */
+        
+        MatrixMultiply(Pp, filter.H, filter.K); /* K = Pp * H */
+        filter.Ks = MatrixInverse(Sr, KALMAN_GAIN_PRECISION,
+                                  tmpM);        /* tmpM = Inv(Sr) */
+        MatrixMultiply(filter.K, tmpM, Sr);     /* K = Pp * H * Inv(Sr) */
+        filter.K = Sr;
+        MatrixTranspose(filter.H);              /* Restore original H */
+    }
+
+    /* At this point K is automatically scalled by Ks because of
+     * Inv(Sr) being scaled. This will prevent K from falling
+     * to 0. If it is 0, it will be set to I.
+     */
+    if (MatrixIsNull(filter.K))
+       MatrixInitIdentity(filter.K, filter.K.rows, filter.K.cols);
+
+    /* Posteriori update: X = Xp + K * Yr / Ks*/
+
+    filter.X = Xp;                      /* X = Xp */
+    MatrixMultiply(filter.K, Yr, Xp);   /* tmp = K * Yr */
+    MatrixReduce(Xp, filter.Ks);        /* tmp = K * Yr / Ks */
+    MatrixAdd(filter.X, Xp);            /* X = Xp + K * Yr / Ks */
+                                        /* Xp no more useful after this */
+
+    /* Posteriori update: P = (Ks * I - K * H) * Pp / Ks */
+
+    MatrixInitDiagonal(tmpM, filter.K.rows,
+                       filter.K.cols,
+                       filter.Ks);          /* tmp = Ks * I */
+    if (filter.unityModel)
+    {
+        MatrixSubtract(tmpM, filter.K);     /* tmp = (Ks * I - K) */
+    }
+    else
+    {
+        MatrixMultiply(filter.K, filter.H,
+                       filter.P);           /* P = (K * H) */
+        MatrixSubtract(tmpM, filter.P);     /* tmp = (Ks * I - K * H) */
+    }
+    MatrixMultiply(tmpM, Pp, filter.P);     /* P = (Ks * I - K * H) * Pp / Ks*/
+    MatrixReduce(filter.P, filter.Ks);      /* P = (Ks * I - K) * Pp / Ks */
+}
+
+/* #define ENABLE_TEST */
+#ifdef ENABLE_TEST
+
+#define DIM          1
+#define SetPoint     1500
+#define InitialPoint 0
+#define InitialP     0
+#define QPoint       200
+#define RPoint       500
+
+int initialX[] = {InitialPoint, InitialPoint, InitialPoint, InitialPoint};
+int initialU[] = {0, 0, 0, 0};
+int lastPoint = 0;
+int lastXPos = 0;
+
+void PlotKalman(Matrix &z, Matrix &x, Matrix &p, int yMin, int yMax, int xPos)
+{
+     int za = ((MatrixGet(z, 0, 0) - yMin) * 63) / (yMax - yMin);
+     int xa = ((MatrixGet(x, 0, 0) - yMin) * 63) / (yMax - yMin);
+     int pa = MatrixGet(p, 0, 0);
+
+     if (xa > 63) xa = 63;
+     if (xa < 0) xa = 0;
+     if (xPos < lastXPos) lastXPos = 0;
+
+     PointOut(xPos, za, false);
+     CircleOut(xPos, za, 2, false);
+     LineOut(lastXPos, lastPoint, xPos, xa, false);
+
+     int deviation = Sqrt(pa);
+     LineOut(xPos, (xa - deviation), xPos, (xa + deviation), false);
+     lastPoint = xa;
+     lastXPos = xPos;
+}
+
+/**
+ * \brief Test run the kalman filter implementation (unit test) using a
+ * stream of random numbers from a guassian distribution and plots the
+ * result on screen
+ */
+void TestKalmanFilter()
+{
+     Matrix x, u, z;
+     int xl;
+     KalmanFilter filter;
+     Matrix A, B, H, Q, R, P;
+
+     MatrixInitIdentity(A, DIM, DIM);
+     MatrixInitIdentity(B, DIM, DIM);
+     MatrixInitIdentity(H, DIM, DIM);
+     MatrixInitDiagonal(Q, DIM, DIM, QPoint);
+     MatrixInitDiagonal(R, DIM, DIM, RPoint);
+     MatrixInitDiagonal(P, DIM, DIM, InitialP);
+
+     MatrixInitElements(x, DIM, 1, initialX);
+     MatrixInitElements(u, DIM, 1, initialU);
+     MatrixInit(z, DIM, 1);
+
+     //KalmanFilterInit(filter, A, B, H, Q, R, P, x);
+     KalmanFilterInitUnity(filter, Q, R, P, x);
+     xl = InitialPoint;
+
+     while(true)
+     {
+         ClearScreen();
+         int jl = 0;
+         for (int j = 5; j < 110; j += 5)
+         {
+             for (int k = 0; k < DIM; k++)
+             {
+                 if (k == 0)
+                 MatrixSet(z, k, 0, SetPoint + RandomNorm(100));
+                 else
+                 MatrixSet(z, k, 0, 0);
+                 break;
+             }
+             int t1 = CurrentTick();
+             KalmanFilterStep(filter, u, z);
+             int t2 = CurrentTick();
+             KalmanFilterGetX(filter, x);
+             KalmanFilterGetP(filter, P);
+             PlotKalman(z, x, P, SetPoint - 700, SetPoint + 700, j);
+
+             TextOut(0,  LCD_LINE1, "---------------------", false);
+             NumOut (0,  LCD_LINE1, MatrixGet(x, 0, 0), false);
+             NumOut (55, LCD_LINE1, t2 - t1, false);
+         }
+     }
+}
+
+/*
+task main()
+{
+    TestKalmanFilter();
+}
+*/
+#endif
+#endif
+

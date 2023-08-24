@@ -1,0 +1,428 @@
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/**
+* @file console.nxc
+* \ingroup utilities
+*
+* @brief A console for NXT LCD
+*
+**/
+
+/*
+   12.04.2013
+   CHANGELOG:
+      - fixed reset console cleared full line!
+        (1 pixel != 1 char) ;)
+      - fixed text was not cleared before cout
+      - 10 - 12 ms for cout, good time considering textout needs 2 ms
+        and cout refreshes all lines!
+      - now with thread safety
+      - cout cleaned
+   TODO:
+   BUGS:
+*/
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#ifndef __CONSOLE_H_
+#define __CONSOLE_H_
+
+// NXC API Display module constants
+// #define 	DISPLAY_HEIGHT   64
+// #define 	DISPLAY_WIDTH   100
+
+/// \cond
+struct sConsole
+{
+   unsigned int  linepointer;
+   unsigned int  topLine;
+   unsigned int  bottomLine;
+   unsigned int  leftBorder;
+   unsigned int  rightBorder;
+   unsigned int  lineLen;
+   unsigned long time;
+   bool endl;
+};
+sConsole mConsole;
+
+// faster outside struct...
+string mConsole_linebuffer[9];
+mutex _consoleMtx;
+/// \endcond
+
+/**
+ * \brief Reset console.
+ *
+ * Resets the console buffer and sets the linepointer to the
+ * top line.
+ *
+ * \param clearScreen   Set false if you do not want
+ *                      to clear the screen
+*/
+void resetConsole(const bool clearScreen = true)
+{
+   Acquire(_consoleMtx);
+   mConsole.linepointer = mConsole.topLine;
+   string clear_overlay;
+   string blank = " ";
+   
+   for(int i = mConsole.topLine; i < mConsole.bottomLine; ++i) {
+      mConsole_linebuffer[i] = "";
+      
+      if(clearScreen) {
+        RectOut(mConsole.leftBorder,
+                LCD_LINE1 - i*8,
+                mConsole.rightBorder - mConsole.leftBorder,
+                7,
+                DRAW_OPT_FILL_SHAPE|DRAW_OPT_INVERT);
+      }
+   }
+   Release(_consoleMtx);
+}
+
+
+/**
+ * \brief Initialize the console.
+ *
+ * Use the parameters to define the size of the console (on
+ * the screen). If you pass no values, the console uses full-screen.
+ * Note that one size is defined as lines and the other in pixels!
+ *
+ * \param topLine       The begin line (1-7)
+ * \param bottomLine    The end line   (1-8)
+ * \param leftBorder    The indent from the left border in pixels.
+ *                      (0 < leftBorder < 99)
+ * \param rightBorder   The end of the line in pixels.
+ *                      (0 < rightBorder < 100)
+ * \return              Returns false if there is an error with your input
+ *
+*/
+bool initConsole(unsigned int topLine = 1, unsigned int bottomLine = 8,
+                 unsigned int leftBorder = 0, unsigned int rightBorder = DISPLAY_WIDTH)
+{
+   Acquire(_consoleMtx);
+   --topLine;
+   mConsole.linepointer = 0;
+   
+   // check user-input
+   if(topLine <= bottomLine && topLine >= 0) {
+      mConsole.topLine = topLine;
+   }
+   else {
+     Release(_consoleMtx);
+     return false;
+   }
+   if(bottomLine <= 8 && bottomLine >= mConsole.topLine) {
+      mConsole.bottomLine = bottomLine;
+   }
+   else {
+     Release(_consoleMtx);
+     return false;
+   
+   }
+   if(leftBorder >= 0 && leftBorder <= rightBorder) {
+      mConsole.leftBorder = leftBorder;
+   }
+   else {
+      Release(_consoleMtx);
+      return false;
+
+   }
+   if(rightBorder <= DISPLAY_WIDTH && rightBorder >= mConsole.leftBorder){
+      mConsole.rightBorder = rightBorder;
+   }
+   else {
+      Release(_consoleMtx);
+      return false;
+   }
+   
+   mConsole.lineLen = mConsole.rightBorder - mConsole.leftBorder;
+   mConsole.time = 0;
+   mConsole.endl = true;
+   
+   Release(_consoleMtx);
+   resetConsole();
+   return true;
+}
+
+/**
+ * \brief Set default wait-time.
+ *
+ * You may set a new default wait time.
+ * Standard wait-time is 0.
+ * The wait time is used after every output function.
+ *
+ * \param time Time in milliseconds.
+*/
+void setConsoleTime(const unsigned long time)
+{
+   Acquire(_consoleMtx);
+   mConsole.time = time;
+   Release(_consoleMtx);
+}
+
+/**
+ * \brief Set standard parameter for endl
+ *
+ * You can set the standard parameter for the end-line
+ * function. Output-functions will use this standard parameter.
+ *
+ * \param endl      Set to false if you do not
+ *                  want a standard word warp after every output.
+*/
+void setConsoleEndl(const bool endl)
+{
+   Acquire(_consoleMtx);
+   mConsole.endl = endl;
+   Release(_consoleMtx);
+}
+
+
+/**
+ * \brief Set the top line.
+ *
+ * Use this to set the begin-line of your console.
+ * (See initConsole for more information)
+ * The console will be reseted with this function call.
+ *
+ * \param line       The begin line (1-7)
+*/
+bool setConsoleTopLine(unsigned int line)
+{
+   Acquire(_consoleMtx);
+   resetConsole();
+   if(line <= mConsole.bottomLine && line >= 1) {
+      --line;
+      mConsole.topLine = line;
+      mConsole.linepointer = line;
+      Release(_consoleMtx);
+      return true;
+   }
+   else
+      Release(_consoleMtx);
+      return false;
+}
+
+
+/**
+ * \brief Set the bottom line.
+ *
+ * Use this to set the last-line of your console.
+ * (See initConsole for more information)
+ * The console will be reseted with this function call.
+ *
+ * \param line       The end line   (1-8).
+*/
+bool setConsoleBottomLine(unsigned int line)
+{
+   Acquire(_consoleMtx);
+   resetConsole();
+   if(line <= 8 && line >= mConsole.topLine+1) {
+      mConsole.bottomLine = line;
+      Release(_consoleMtx);
+      return true;
+   }
+   else {
+      Release(_consoleMtx);
+      return false;
+   }
+}
+
+/**
+ * \brief Set the left border.
+ *
+ * Use this to set the left border of your console.
+ * (See initConsole for more information)
+ * The console will be reseted with this function call.
+ *
+ * \param x       (0 < leftBorder < 99)
+*/
+bool setConsoleLeftBorder(unsigned int x)
+{
+   Acquire(_consoleMtx);
+   resetConsole();
+   if(x >= 0 && x <= mConsole.rightBorder) {
+      mConsole.leftBorder = x;
+   }
+   else {
+      Release(_consoleMtx);
+      return false;
+   }
+   Release(_consoleMtx);
+}
+
+/**
+ * \brief Set the right border.
+ *
+ * Use this to set the right border of your console.
+ * (See initConsole for more information)
+ * The console will be reseted with this function call.
+ *
+ * \param x       (0 < x < 100)
+*/
+bool setConsoleRightBorder(unsigned int x)
+{
+   Acquire(_consoleMtx);
+   resetConsole();
+   if(x <= DISPLAY_WIDTH && x >= mConsole.leftBorder) {
+      mConsole.rightBorder = x;
+   }
+   else {
+      Release(_consoleMtx);
+      return false;
+   }
+   Release(_consoleMtx);
+}
+
+
+/**
+ * \brief Get the actual line
+ *
+ * Get the actual line number (1-8)
+ *
+ * \return  line number (1-8)
+*/
+unsigned int getConsoleLinepointer()
+{
+   return mConsole.linepointer;
+}
+
+
+/**
+ * \brief Write an output to console
+ *
+ * Write string and wait for "time" milliseconds.
+ * If "endl" is true, the console will print the text and
+ * end this line and begin a new line with the next function call.
+ * If endl is false, the console will stay in the current line
+ * and the next text will be attached to the current string in this line.
+ *
+ * \param output      The text to print.
+ * \param time        Wait-time after printing.
+ *                    Standard wait-time is 0.
+ * \param endl        End line after printing.
+*/
+void cout(string output, unsigned long time = NA, bool endl = NA)
+{
+   Acquire(_consoleMtx);
+   if(time == NA) time = mConsole.time;
+   if(endl == UCHAR_MAX) endl = mConsole.endl;
+
+   static bool save_endl = true;
+   unsigned int strLen;
+   Yield(); Wait(1);    // anti bug!
+   strLen = StrLen(output);
+   // not perfect, but it works
+   output = SubStr(output, 0, mConsole.lineLen/6); // line len in pixles!!!
+
+   if(save_endl) {
+      mConsole_linebuffer[mConsole.linepointer] = output;
+
+      // clear screen
+      for(int i = mConsole.topLine; i < mConsole.bottomLine; ++i) {
+         TextOut(mConsole.leftBorder,
+                 LCD_LINE1 - i*8,
+                 mConsole_linebuffer[i],
+                 DRAW_OPT_FILL_SHAPE|DRAW_OPT_INVERT);
+      }
+   
+      // line postpone
+      if(mConsole.linepointer >= mConsole.bottomLine) {
+         for(int j = mConsole.topLine+1; j < mConsole.bottomLine+1; ++j) {
+            mConsole_linebuffer[j-1] = mConsole_linebuffer[j];
+         }
+         mConsole.linepointer--;
+      }
+      
+      // draw
+      for(int i = mConsole.topLine; i < mConsole.bottomLine; ++i) {
+         TextOut(mConsole.leftBorder, LCD_LINE1 - i*8, mConsole_linebuffer[i]);
+
+      }
+   }
+   else {
+      mConsole_linebuffer[mConsole.linepointer] =
+         StrCat(mConsole_linebuffer[mConsole.linepointer], output);
+      TextOut(mConsole.leftBorder,
+              LCD_LINE1 - mConsole.linepointer*8,
+              mConsole_linebuffer[mConsole.linepointer]);
+   }
+   
+   if(endl)
+      mConsole.linepointer++;
+   
+   save_endl = endl;
+   
+   Wait(time);
+   Release(_consoleMtx);
+}
+
+
+/**
+ * \brief Write a number output to console
+ *
+ * Write number and wait for "time" milliseconds.
+ * If "endl" is true, the console will print the number and
+ * end this line and begin a new line with the next function call.
+ * If endl is false, the console will stay in the current line
+ * and the next text will be attached to the current number in this line.
+ *
+ * \param number      The number to print.
+ * \param time        Wait-time after printing.
+ *                    Standard wait-time is 0.
+ * \param endl        End line after printing.
+*/
+inline void coutNum(float number, unsigned long time = NA, bool endl = NA)
+{
+   string temp;
+   temp = NumToStr(number);
+   cout(temp, time, endl);
+}
+
+
+/**
+ * \brief Write formatted data output to console
+ *
+ * Write formatted data and wait for "time" milliseconds.
+ * If "endl" is true, the console will print the formatted data and
+ * end this line and begin a new line with the next function call.
+ * If endl is false, the console will stay in the current line
+ * and the next text will be attached to the current number in this line.
+ *
+ * \param format      A string specifying the desired format.
+ *                    See nxc api sprintf or ex_console
+ * \param number      The number to print in the specified format
+ * \param time        Wait-time after printing.
+ *                    Standard wait-time is 0.
+ * \param endl        End line after printing.
+*/
+inline void coutF(string format,
+                  float number,
+                  unsigned long time = NA,
+                  bool endl = NA)
+{
+   string temp;
+   sprintf(temp, format, number);
+   cout(temp, time, endl);
+}
+
+
+/**
+ * \brief Checks if any button is pressed
+ *
+ * Returns true if any button is pressed.
+ * It will not wait for a button press!
+ * Example: until( kbhit() ); <- wait until any button pressed
+ *
+ * \return The button state.
+*/
+inline bool kbhit()
+{
+    return ButtonPressed(BTNEXIT)
+        || ButtonPressed(BTNRIGHT)
+        || ButtonPressed(BTNLEFT)
+        || ButtonPressed(BTNCENTER);
+}
+
+
+
+#endif

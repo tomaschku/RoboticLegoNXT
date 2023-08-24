@@ -1,0 +1,119 @@
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/**
+* @file debug-file.nxc
+* \ingroup debug
+*
+* @brief Debug functions for fileIO.
+*
+**/
+
+/*
+   CHANGELOG:
+   TODO:
+   BUGS:
+*/
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#ifndef __DEBUG_FILE_H_
+#define __DBEUG_FILE_H_
+
+#include "class.nxc"
+
+/// Do not define if you make a release executable with no debugging
+#define DEBUG_FILE
+
+/// \cond
+#ifdef DEBUG_FILE
+struct sDebugFile
+{
+   string name;
+   byte handle;
+};
+sDebugFile mDebugFile;
+#endif
+/// \endcond
+
+
+/**
+ * \brief Set debug-file
+ *
+ * Set the file for saving debug messages
+ *
+ * \param handle The file handle. See nxc api for more info.
+*/
+void initFileDebug(byte handle)
+{
+   #ifdef DEBUG_FILE
+   mDebugFile.handle = handle;
+   #endif
+}
+
+
+
+/**
+ * \brief Write message into debug file.
+ *
+ * See class description for more information!
+ *
+ * \param message      The debug message.
+ * \param class
+*/
+inline void writeDebug(string message,
+                       unsigned int class = NA)
+{
+   #ifdef DEBUG_FILE
+   if(classHandler(class)) {
+      unsigned int cnt;
+      WriteLnString(mDebugFile.handle, message, cnt);
+   }
+   #endif
+}
+
+
+
+/**
+ * \brief Write number into debug file.
+ *
+ * See class description for more information!
+ *
+ * \param number      The debug number.
+ * \param class
+*/
+inline void writeDebugNum(float number,
+                          unsigned int class = NA)
+{
+   #ifdef DEBUG_FILE
+   string msg = "";
+   msg = NumToStr(number);
+   writeDebug(msg, class);
+   #endif
+}
+
+
+
+/**
+ * \brief Write formatted data into debug file.
+ *
+ * See class description for more information!
+ *
+ * \param format   A string specifying the desired format.
+ *                 See nxc api sprintf or ex_console
+ * \param number   The number to print in the specified format.
+ * \param class
+*/
+inline void writeDebugF(string format,
+                        float number,
+                        unsigned int class = NA)
+{
+   #ifdef DEBUG_FILE
+   string print;
+   sprintf(print, format, number);
+   writeDebug(print, class);
+   #endif
+}
+
+
+#endif
+
+

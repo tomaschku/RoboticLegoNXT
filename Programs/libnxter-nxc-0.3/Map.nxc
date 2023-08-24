@@ -1,0 +1,298 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Map.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/**
+ * \file Map.nxc
+ * \brief A 2D map implementation that holds a set of landmark objects
+ */
+
+#ifndef __MAP_H_
+#define __MAP_H_
+
+#include "Screen.nxc"
+#include "Angle.nxc"
+#include "Vector.nxc"
+
+#define MAP_X(map, index) (map.landmarks[(index * 2)]);
+#define MAP_Y(map, index) (map.landmarks[(index * 2) + 1]);
+
+/**
+ * \brief Map class to hold a collection of landmarks.
+ */
+struct Map
+{
+    long landmarks[];
+};
+
+/**
+ * \brief Initializes the Map with an array of landmarks. The array has
+ * alternate x and y positions of the landmarks
+ */
+void MapArrayLandmarks(Map &map, long &landmarks[])
+{
+    ArrayBuild(map.landmarks, landmarks);
+}
+
+/**
+ * \brief Adds a landmark (x,y) to the map
+ */
+void MapAddLandMark(Map &map, int x, int y)
+{
+    ArrayBuild(map.landmarks, x, y);
+}
+
+/**
+ * \brief Returns the number of landmarks currently present in the map
+ */
+int MapGetNumLandmarks (Map &map)
+{
+    return ArrayLen(map.landmarks)/2;
+}
+
+/**
+ * \brief Gets a landmark at the given index and returns it in the provide vector
+ */
+void MapGetLandmark(Map &map, int index, Vector &vec)
+{
+    long x, y;
+
+    x = MAP_X(map, index);
+    y = MAP_Y(map, index);
+    VectorInit(vec, x, y, 0);
+}
+
+/**
+ * \brief Finds the nearest landmark around the reference vector within the
+ * bounds of given minAngle and maxAngle from the reference vector.
+ *
+ * If a landmark is found, returns true and retLandmark is set, otherwise
+ * false is returned and retLandmark is not set. minAngle is angle bound on the
+ * right side of the search, and maxAngle is angle bound on the left side
+ * (because angle increses on anti-clockwise). minAngle and maxAngle values
+ * have nothing to do with their numerical min or max values, but rather refers
+ * to their orientation in the plane. minAngle and maxAngle are abosulute
+ * angle on the map (0 .. 360) and theta component in the referece vector is
+ * not used.
+ */
+bool MapFindNearestLandmarkAtAngle(Map &map, Vector &reference, int minAngle,
+                                   int maxAngle, Vector &retLandmark)
+{
+    long minDistance = 20000000;
+    long minIndex = -1;
+    int size;
+    int flipCheck = false;
+    int angleDiff = maxAngle;
+    
+    if (minAngle > maxAngle) flipCheck = true;
+
+    size = MapGetNumLandmarks(map);
+    for (int i = 0; i < size; i++)
+    {
+        Vector landmark;
+        MapGetLandmark(map, i, landmark);
+        VectorSubtract(landmark, reference);
+        long distance = VectorGetDistanceVec(reference, landmark);
+        int angle = VectorGetAngleVec(reference, landmark);
+        if (flipCheck == false && (angle >= minAngle && angle <= maxAngle) &&
+            distance < minDistance)
+        {
+            minIndex = i;
+            minDistance = distance;
+        }
+        else if (flipCheck == true && (angle >= minAngle || angle <= maxAngle) &&
+            distance < minDistance)
+        {
+            minIndex = i;
+            minDistance = distance;
+        }
+    }
+    if (minIndex >= 0)
+    {
+        MapGetLandmark(map, minIndex, retLandmark);
+        return true;
+    }
+    return false;
+}
+
+/**
+ * \brief Finds two nearest landmarks around the reference vector within the
+ * bounds of given minAngle and maxAngle from the reference vector, that can
+ * be used for location triangulation.
+ *
+ * If suitable landmarks are found, returns true and landmark1 and landmark2
+ * are set, otherwise false is returned and the vectors are not set.
+ */
+bool MapFindTriangulationLandmarks(Map &map, Vector &reference,
+                                   int minAngle, int maxAngle,
+                                   Vector &landmark1, Vector &landmark2)
+{
+    bool found1 = false;
+    bool found2 = false;
+    int min, mid, max;
+    Vector lm1, lm2;
+
+    min = minAngle;
+    max = maxAngle;
+
+    while (true)
+    {
+        int angleDiff = maxAngle;
+        angleDiff = AngleAbsSub(angleDiff, minAngle);
+
+        // Print("maxAngle= %d", maxAngle, 0);
+        // Print("minAngle = %d", minAngle, 0);
+        // Print("angleDiff = %d", angleDiff, 1000);
+        
+        /* Calculate mid of current min-max */
+        mid = min;
+        mid = AngleAbsAdd(mid, angleDiff/2);
+        
+        found1 = MapFindNearestLandmarkAtAngle(map, reference, min, mid, lm1);
+        found2 = MapFindNearestLandmarkAtAngle(map, reference, mid, max, lm2);
+        
+        if (found1 == false && found2 == false)
+            return false;
+        if (found1 == true && found2 == true)
+        {
+            landmark1 = lm1;
+            landmark2 = lm2;
+            return true;
+        }
+        if (angleDiff < 20) /* Angle too acute */
+        {
+            return false;
+        }
+        if (found1 == true) /* Only found in 1st half */
+        {
+            max = mid;
+        }
+        else /* Only found in 2nd half */
+        {
+            min = mid;
+        }
+    }
+}
+
+/**
+ * \brief Finds the nearest landmard around the reference vector.
+ *
+ * If a landmark is found, returns true and retLandmark is set, otherwise
+ * false is returned and retLandmark is not set.
+ */
+bool MapFindNearestLandmark(Map &map, Vector &reference, Vector &retLandmark)
+{
+    int size;
+    long minDistance = 2000000000;
+    long distance;
+    
+    size = MapGetNumLandmarks(map);
+    if (size <= 0) return false;
+    
+    for (int i = 0; i < size; i++)
+    {
+        Vector landmark;
+        MapGetLandmark(map, i, landmark);
+        VectorSubtract(landmark, reference);
+        distance = VectorGetDistance(landmark);
+        if (distance > minDistance)
+        {
+            minDistance = distance;
+            MapGetLandmark(map, i, retLandmark);
+        }
+    }
+    return true;
+}
+
+#ifdef ENABLE_TEST
+
+long testLandmarks[4] = {250, 250, 250, -250, -250, 250, -250, -250};
+void TestMap()
+{
+    bool found;
+    Map map;
+    Vector reference, detectedObject, landmark1, landmark2;
+
+    MapArrayLandmarks(map, testLandmarks);
+
+    VectorInit(reference, 0, 0, 0);
+    found = MapFindNearestLandmarkAtAngle(map, reference, 350, 105,
+                                          detectedObject);
+    TEST((found == true), "No landmark at 45");
+    TEST((detectedObject.x == 250 && detectedObject.y == 250),
+         "No object 1");
+         
+    found = MapFindNearestLandmarkAtAngle(map, reference, 75, 195,
+                                          detectedObject);
+    TEST((found == true), "No landmark at 135");
+    TEST((detectedObject.x == -250 && detectedObject.y == 250),
+         "No object 2");
+
+    found = MapFindNearestLandmarkAtAngle(map, reference, 165, 285,
+                                          detectedObject);
+    TEST((found == true), "No landmark at 225");
+    TEST((detectedObject.x == -250 && detectedObject.y == -250),
+         "No object 3");
+
+    found = MapFindNearestLandmarkAtAngle(map, reference, 225, 375,
+                                          detectedObject);
+    TEST((found == true), "No landmark at 315");
+    TEST((detectedObject.x == 250 && detectedObject.y == -250),
+         "No object 4");
+
+    found = MapFindTriangulationLandmarks(map, reference, 280, 80,
+                                          landmark1, landmark2);
+    TEST((found == true), "landmark tri at 0");
+    TEST((landmark1.x == 250 && landmark1.y == -250),
+         "No tri object 1");
+    TEST((landmark2.x == 250 && landmark2.y == 250),
+         "No tri object 2");
+
+    found = MapFindTriangulationLandmarks(map, reference, 10, 170,
+                                          landmark1, landmark2);
+    TEST((found == true), "landmark tri at 90");
+    TEST((landmark1.x == 250 && landmark1.y == 250),
+         "No tri object 1");
+    TEST((landmark2.x == -250 && landmark2.y == 250),
+         "No tri object 2");
+
+    found = MapFindTriangulationLandmarks(map, reference, 110, 260,
+                                          landmark1, landmark2);
+    TEST((found == true), "landmark tri at 90");
+    TEST((landmark1.x == -250 && landmark1.y == 250),
+         "No tri object 1");
+    TEST((landmark2.x == -250 && landmark2.y == -250),
+         "No tri object 2");
+
+    found = MapFindTriangulationLandmarks(map, reference, 190, 350,
+                                          landmark1, landmark2);
+    TEST((found == true), "landmark tri at 90");
+    TEST((landmark1.x == -250 && landmark1.y == -250),
+         "No tri object 1");
+    TEST((landmark2.x == 250 && landmark2.y == -250),
+         "No tri object 2");
+}
+/*
+task main()
+{
+    TestMap();
+}
+*/
+#endif /* ENABLE_TEST */
+#endif /* __MAP_H_ */
+

@@ -1,0 +1,195 @@
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/**
+* @file debug-console.nxc
+* \ingroup debug
+*
+* @brief Debug functions for console.
+*
+**/
+
+/*
+   CHANGELOG:
+   TODO:
+   BUGS:
+*/
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#include "class.nxc"
+#include "console.nxc"
+
+
+#ifndef __DEBUG_CON_H_
+#define __DBEUG_CON_H_
+
+
+/// Do not define if you make a release executable with no debugging
+#define DEBUG_CONSOLE
+
+
+/// \cond
+#ifdef DEBUG_CONSOLE
+struct sDebugConsole
+{
+   unsigned long Time;
+   bool Endl;
+};
+sDebugConsole mDebugConsole;
+#endif
+/// \endcond
+
+/**
+ * \brief Initialize the console debug module.
+ *
+ * Initialize the console debug module with standard parameters.
+ * The wait time is used after every output function.
+ * Standard wait time is 1sec .
+ *
+ * \param time      Default wait time after display debug message.
+ * \param endl      Set to false if you do not
+ *                  want a standard word warp after every output.
+*/
+void initConsoleDebug(const long time = 1000, const bool endl = true)
+{
+   #ifdef DEBUG_CONSOLE
+   // This are the default prameter given by the developer
+   mDebugConsole.Time = time;
+   mDebugConsole.Endl = endl;
+   #endif
+}
+
+
+/**
+ * \brief Set default wait-time.
+ *
+ * You may set a new default wait time.
+ * Standard wait-time is 1sec.
+ * The wait time is used after every output function.
+ *
+ * \param time Time in milliseconds.
+*/
+void setConsoleDebugTime(const unsigned long time)
+{
+   #ifdef DEBUG_CONSOLE
+   mDebugConsole.Time = time;
+   #endif
+}
+
+
+/**
+ * \brief Set standard parameter for endl
+ *
+ * You can set the standard parameter for the end-line
+ * function. Output-functions will use this standard parameter.
+ *
+ * \param endl      Set to false if you do not
+ *                  want a standard word warp after every output.
+*/
+void setConsoleDebugEndl(const bool endl)
+{
+   #ifdef DEBUG_CONSOLE
+   mDebugConsole.Endl = endl;
+   #endif
+}
+
+
+/**
+ * \brief Write debug output to console
+ *
+ * Write debug message and wait for "time" milliseconds.
+ * If "endl" is true, the console will print the text and
+ * end this line and begin a new line with the next function call.
+ * If endl is false, the console will stay in the current line
+ * and the next text will be attached to the current string in this line.
+ * See class description for more information!
+ *
+ * \param message     The debug message to print.
+ * \param class
+ * \param time        Wait-time after printing.
+ *                    Standard wait-time is 1sec.
+ * \param endl        End line after printing.
+*/
+inline void coutDebug(string message,
+                      unsigned int class = NA,
+                      unsigned long time = NA,
+                      bool endl = NA)
+{
+   #ifdef DEBUG_CONSOLE
+   if(time == NA) time = mDebugConsole.Time;
+   if(endl == UCHAR_MAX) endl = mDebugConsole.Endl;
+
+   if(classHandler(class))
+      cout(message, time, endl);
+   #endif
+}
+
+
+
+/**
+ * \brief Write debug output to console
+ *
+ * Write debug number and wait for "time" milliseconds.
+ * If "endl" is true, the console will print the number and
+ * end this line and begin a new line with the next function call.
+ * If endl is false, the console will stay in the current line
+ * and the next text will be attached to the current string in this line.
+ * See class description for more information!
+ *
+ * \param number      The debug number to print.
+ * \param class
+ * \param time        Wait-time after printing.
+ *                    Standard wait-time is 1sec.
+ * \param endl        End line after printing.
+*/
+inline void coutDebugNum(float number,
+                         unsigned int class = NA,
+                         unsigned long time = NA,
+                         bool endl = NA)
+{
+   #ifdef DEBUG_CONSOLE
+   if(time == NA) time = mDebugConsole.Time;
+   if(endl == UCHAR_MAX) endl = mDebugConsole.Endl;
+   
+   if(classHandler(class))
+      coutNum(number, time, endl);
+   #endif
+}
+
+
+
+/**
+ * \brief Write formatted data output to console
+ *
+ * Write formatted data and wait for "time" milliseconds.
+ * If "endl" is true, the console will print the formatted data and
+ * end this line and begin a new line with the next function call.
+ * If endl is false, the console will stay in the current line
+ * and the next text will be attached to the current number in this line.
+ *
+ * \param format      A string specifying the desired format.
+ *                    See nxc api sprintf or ex_console.
+ * \param number      The number to print in the specified format.
+ * \param class
+ * \param time        Wait-time after printing.
+ *                    Standard wait-time is 0.
+ * \param endl        End line after printing.
+*/
+inline void coutDebugF(string &format,
+                       float &number,
+                       unsigned int class = NA,
+                       unsigned long time = NA,
+                       bool endl = NA)
+{
+   #ifdef DEBUG_CONSOLE
+   if(time == NA) time = mDebugConsole.Time;
+   if(endl == UCHAR_MAX) endl = mDebugConsole.Endl;
+
+   if(classHandler(class))
+      coutF(format, number, time, endl);
+   #endif
+}
+
+
+
+#endif
+

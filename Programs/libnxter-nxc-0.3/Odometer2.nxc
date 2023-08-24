@@ -1,0 +1,342 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Odometer2.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#ifndef _ODOMETER2_H_
+#define _ODOMETER2_H_
+
+/**
+ * \file Odometer2.nxc
+ * \brief Implements odometery for 2 wheels drive robot base using motor
+ * tachometers
+ *
+ * It maintains an integration of robot
+ * position based on peridic samples of tacho counts. Once the odometer is
+ * initialized, odometer2Step() needs to be called at regular interval (does
+ * not have to be precise intervals).
+ */
+
+//#define ENABLE_DEBUG
+//#define ENABLE_TEST
+#include "Debug.nxc"
+
+#include "Vector.nxc"
+#include "Map.nxc"
+
+#define INFINITY 2147483647 /* 2^31 -1 */
+
+/**
+ * \brief Odometer class for 2 wheels drive robot base that desribes wheel
+ * anatomy and positional integration.
+ */
+struct Odometer2
+{
+    /* Wheel anatomy */
+    int wheelDiameter;   /**< Wheel diameter milimeter */
+    int axialLength;     /**< Wheel axial length (distance between the wheels) */
+    int gearRatio;       /**< Output (wheel rotation) to Input (tacho counts) gear ratio scaled by 100 */
+    int leftWheelMotor;  /**< left motor */
+    int rightWheelMotor; /**< Right Motor */
+    
+    /* Accumulative position, time and samles count since the begining */
+    Vector cumulativePosition;
+    long cumulativeTime;
+    long cumulativeSamplesCount;
+
+    /* Accumulative position, time and samles count since the delta clear */
+    bool enableDeltaPosition;
+    Vector deltaPosition;
+    long deltaTime;
+    long deltaSamplesCount;
+    
+    /* Last sample: dx, position moved in last sample and dt sample period */
+    bool enableDPosition;
+    Vector dPosition;
+    long dTime;
+    
+    /* Speed of movement */
+    long speed;
+
+    /* Last states used for internal computation */
+    long lastTachoLeft;
+    long lastTachoRight;
+    long lastSampleTime;
+};
+
+/**
+ * \brief Updates current odometry position.
+ *
+ * Computes the amount by which wheel base moved from the change in tacho counts
+ * of its two motors and updates its intergral states.
+ *
+ * This function should be called at regular intervals, not neccessarily at
+ * precise intervals, to keep odometer up to date. It firsts computes current
+ * change in position since last step (dx) and updates commulative and detla
+ * position integrals.
+ */
+safecall void Odometer2Step(Odometer2 &wheelBase)
+{
+    long tachoLeft = GetOutput(wheelBase.leftWheelMotor, RotationCount);
+    long tachoRight = GetOutput(wheelBase.rightWheelMotor, RotationCount);
+    long dLeftTacho = (tachoLeft - wheelBase.lastTachoLeft);
+    long dRightTacho = (tachoRight - wheelBase.lastTachoRight);
+    long tick = CurrentTick();
+    
+    /* The actual v is also supposed to be divided by 22918.31 as per
+     * the equation, but we will defer it for more approriate time to
+     * preserve integer precision.
+     */
+    long v = (((dLeftTacho + dRightTacho) *
+                wheelBase.wheelDiameter) * wheelBase.gearRatio);
+    long w = ((dRightTacho - dLeftTacho) * wheelBase.wheelDiameter *
+                wheelBase.gearRatio)/(wheelBase.axialLength * 200);
+
+    /* dx odometry */
+    if (wheelBase.enableDPosition)
+    {
+        wheelBase.dPosition.theta = w;
+        wheelBase.dPosition.x = (v * Cos(w))/2291831;
+        wheelBase.dPosition.y = (v * Sin(w))/2291831;
+        wheelBase.dTime = tick - wheelBase.lastSampleTime;
+    }
+
+    /* Delta odometry */
+    if (wheelBase.enableDeltaPosition)
+    {
+        wheelBase.deltaPosition.theta = wheelBase.deltaPosition.theta + w;
+        if (wheelBase.deltaPosition.theta >= 360)
+            wheelBase.deltaPosition.theta %= 360;
+        wheelBase.deltaPosition.x =
+            wheelBase.deltaPosition.x +
+                ((v * Cos(wheelBase.deltaPosition.theta))/2291831);
+        wheelBase.deltaPosition.y =
+            wheelBase.deltaPosition.y +
+                ((v * Sin(wheelBase.deltaPosition.theta))/2291831);
+        wheelBase.deltaTime += wheelBase.dTime;
+        wheelBase.deltaSamplesCount++;
+    }
+
+    /* Cumulative odometry */
+    wheelBase.cumulativePosition.theta =
+        wheelBase.cumulativePosition.theta + w;
+    if (wheelBase.cumulativePosition.theta >= 360)
+        wheelBase.cumulativePosition.theta %= 360;
+    if (wheelBase.cumulativePosition.theta < 0)
+        wheelBase.cumulativePosition.theta += 360;
+    wheelBase.cumulativePosition.x =
+        wheelBase.cumulativePosition.x +
+            ((v * Cos(wheelBase.cumulativePosition.theta))/2291831);
+    wheelBase.cumulativePosition.y =
+        wheelBase.cumulativePosition.y +
+            ((v * Sin(wheelBase.cumulativePosition.theta))/2291831);
+    wheelBase.cumulativeTime += wheelBase.dTime;
+    wheelBase.cumulativeSamplesCount++;
+
+    /* Preserve past state */
+    wheelBase.lastTachoLeft = tachoLeft;
+    wheelBase.lastTachoRight = tachoRight;
+    wheelBase.lastSampleTime = tick;
+    wheelBase.speed = (v * 1000) / wheelBase.dTime; /* 1s = 1000ms */
+}
+
+/**
+ * \brief Initializes a 2 wheel drive odometer.
+ *
+ * leftWheelMotor and rightWheelMotor
+ * are the left wheel and right wheel motors, wheelDiameter is the diameter
+ * of the wheels (in mm), gearRatio is the ratio of wheel rotational angle
+ * per tacho count (scaled by 100), initialLeftTacho and initialRightTahoc
+ * are the initial tacho counts. If enableDPosition is set true, it also
+ * maintains dx of current step, i.e. change in position since last step.
+ * If enableDeltaPosition is enabled, it also maintains deltaX, which is the
+ * position changed since last deta was cleared.
+ */
+void Odometer2Init(Odometer2 &wheelBase,
+                   int leftWheelMotor, int rightWheelMotor,
+                   int axialLength, int wheelDiameter, int gearRatio,
+                   int initialLeftTacho, int initialRightTacho,
+                   bool enableDPosition, bool enableDeltaPosition)
+{
+    wheelBase.leftWheelMotor = leftWheelMotor;
+    wheelBase.rightWheelMotor = rightWheelMotor;
+    wheelBase.gearRatio = gearRatio;
+    wheelBase.axialLength = axialLength;
+    wheelBase.wheelDiameter = wheelDiameter;
+    wheelBase.enableDPosition = enableDPosition;
+    wheelBase.enableDeltaPosition = enableDeltaPosition;
+    
+    /* Cumulative integral */
+    VectorInit(wheelBase.cumulativePosition, 0, 0, 0);
+    wheelBase.cumulativeTime = 0;
+    wheelBase.cumulativeSamplesCount = 0;
+    
+    /* Delta integral */
+    VectorInit(wheelBase.deltaPosition, 0, 0, 0);
+    wheelBase.deltaTime = 0;
+    wheelBase.deltaSamplesCount = 0;
+
+    /* dx and dt */
+    VectorInit(wheelBase.dPosition, 0, 0, 0);
+    wheelBase.dTime = 0;
+
+    wheelBase.speed = 0;
+    wheelBase.lastTachoLeft = initialLeftTacho;
+    wheelBase.lastTachoRight = initialRightTacho;
+    wheelBase.lastSampleTime = 0;
+}
+
+/**
+ * \brief Gets current cumulative position; position relative to the initial
+ * robot position (usually origin in world coordinate)
+ */
+inline void Odometer2GetCumulativePosition (Odometer2 odometer, Vector &retPosition)
+{
+    retPosition = odometer.cumulativePosition;
+}
+
+/**
+ * \brief Gets the total number of sample counts used in cumulative position
+ * integration
+ */
+inline long Odometer2GetCumulativeSamplesCount (Odometer2 odometer)
+{
+    return odometer.cumulativeSamplesCount;
+}
+
+/**
+ * \brief Gets delta position integration; current position relative to the position
+ * when drift was corrected and delta cleared.
+ */
+inline void Odometer2GetDeltaPosition (Odometer2 odometer, Vector &retPosition)
+{
+    retPosition = odometer.deltaPosition;
+}
+
+/**
+ * \brief Gets samples count used in current deta integration.
+ */
+inline long Odometer2GetDeltaSamplesCount (Odometer2 odometer)
+{
+    return odometer.deltaSamplesCount;
+}
+
+/**
+ * \brief Corrects odometery drift at the position when last drift was corrected.
+ *
+ * The given correction vector is considered the corrected robot position at the
+ * time when delta was cleared (last drift correction). So, corrected commulative
+ * position is this vector plus the delta position. Current delta position is
+ * properly translated and added to corrected position to get current
+ * cumulative position. Delta is clear after the drift correction and its
+ * last value passed to retDeltaPosition.
+ */
+inline void Odometer2SetDriftCorrection (Odometer2 odometer, Vector &correction,
+                                         Vector &retDeltaPosition)
+{
+    int deltaAngle;
+    long deltaDistance;
+    
+    odometer.cumulativePosition = correction;
+
+    deltaAngle = odometer.deltaPosition.theta + correction.theta;
+    deltaDistance = VectorGetDistance(odometer.deltaPosition);
+    
+    VectorTranslate(odometer.cumulativePosition, deltaDistance, deltaAngle);
+    retDeltaPosition = odometer.deltaPosition;
+    VectorInit(odometer.deltaPosition, 0, 0, 0);
+}
+
+/* test for odometer */
+#ifdef ENABLE_TEST
+
+int lastX = 0;
+int lastY = 0;
+void Plot(Vector &pos, int min, int max)
+{
+     int x = (pos.x - min) * 63 / (max - min);
+     int y = (pos.y - min) * 63 / (max - min);
+
+     if (x > 63) x = 63;
+     if (y < 0) y = 0;
+
+     if (lastX != 0 && lastY != 0)
+         LineOut(lastX, lastY, x, y, false);
+     /*
+     int tangentX;
+     int tangentY;
+     if (pos.theta < 90)
+     {
+         tangentX = 10 * Cos(pos.theta);
+         tangentY = 10 * Sin(pos.theta);
+     }
+     else if (pos.theta < 180)
+     {
+         tangentX = -10 * Cos(pos.theta - 90);
+         tangentY = 10 * Sin(pos.theta - 90);
+     }
+     else if (pos.theta < 270)
+     {
+         tangentX = 10 * Cos(pos.theta);
+         tangentY = 10 * Sin(pos.theta);
+     }
+     else
+     {
+         tangentX = 10 * Cos(pos.theta);
+         tangentY = 10 * Sin(pos.theta);
+     }
+     */
+     int tangentX = x + Cos(pos.theta) / 20;
+     int tangentY = y + Sin(pos.theta) / 20;
+
+     //LineOut(x, y, tangentX, tangentY, false);
+     lastX = x;
+     lastY = y;
+}
+
+#define AXIAL         83
+#define WHEEL_DIA     56
+#define SAMPLING_RATE 100
+void TestOdometer2 ()
+{
+    OnFwdSync(OUT_BC, 20, 100);
+    Odometer2 robot;
+    //SetOutput(OUT_BC, UpdateFlags, UF_UPDATE_RESET_BLOCK_COUNT);
+    Odometer2Init(robot, OUT_B, OUT_C, AXIAL, WHEEL_DIA, 100, 0, 0, true, true);
+
+    ClearScreen();
+    LineOut(0, 32, 63, 32, false);
+    LineOut(32, 0, 32, 63, false);
+
+    while(true)
+    {
+        Vector pos;
+        Odometer2Step(robot);
+        Odometer2GetDeltaPosition(robot, pos);
+        Plot(pos, -550, 550);
+        if (Abs(pos.theta) > 90) break;
+        Wait(50);
+    }
+    Off(OUT_BC);
+    TextOut(0, LCD_LINE1, "Wheel tested");
+    Wait(20000);
+}
+
+#endif /* ENABLE_TEST */
+#endif /* _ODOMETER2_H_ */
+

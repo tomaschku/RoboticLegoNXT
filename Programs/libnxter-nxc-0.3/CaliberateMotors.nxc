@@ -1,0 +1,148 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    CaliberateMotors.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/**
+ * \file
+ * \brief Motor setup caliberation utilities
+ */
+
+/* Power assignments */
+#define MOTOR_POWER_FAST      75
+#define MOTOR_POWER_MODERATE  75
+#define MOTOR_POWER_SLOW      30
+
+/* Motor assignments */
+#define MOTOR_TILT       OUT_C
+#define MOTOR_STRIDE     OUT_B
+
+/* Sensor assignments */
+#define TOUCH_SENSOR     IN_1
+#define LIGHT_SENSOR     IN_3
+
+/* Light sensor threshold below which proximity is confirmed */
+#define LIGHT_SENSOR_PROXIMITY_THRESHOLD 40
+
+/* Tolerance degrees for cycle caliberation. Cycle count will be trimmed */
+#define CALIBERATION_ERROR_TOLERANCE     90
+
+int GetSensorProximity (int sensor)
+{
+    if (sensor == TOUCH_SENSOR)
+       return Sensor(TOUCH_SENSOR);
+    if (Sensor(LIGHT_SENSOR) < LIGHT_SENSOR_PROXIMITY_THRESHOLD)
+       return 1;
+    else
+       return 0;
+}
+
+int CaliberateMotorArc(int motor, int power, int sensor,
+                       int postAlignmentAngle)
+{
+    if (!GetSensorProximity(sensor))
+    {
+        OnFwd(motor, power);
+        while (!GetSensorProximity(sensor)) Wait(20);
+        Off(motor);
+    }
+    RotateMotor(motor, power, postAlignmentAngle);
+}
+
+/**
+ * \brief Caliberates a rotary motor setup that has a sensor attached to detect
+ * a cyclic position.
+ *
+ * Motor is turned couple of times and sensor is read. Then the motor is
+ * aligned postAlignmentPercentage amount away from the sensor (0% is just
+ * at the sensor ... 100% is one full cycle). It returns amount of tacho counts
+ * required to make a full cycle in the setup.
+ */
+int CaliberateMotor(int motor, int sensor, int postAlignmentPercentage)
+{
+    int extremeTachoMin;
+    int extremeTachoMax;
+    int cycleCountMin;
+    int cycleCountMax;
+    int cycleCount;
+    int alignDegrees;
+
+    /* Start tilt motor and monitor touch sensor for rythm cycle */
+    OnFwd(motor, MOTOR_POWER_FAST);
+
+    /* First let the sensor get out of active state */
+    while (GetSensorProximity(sensor));
+
+    /* Wait for sensor to activate */
+    while (!GetSensorProximity(sensor));
+
+    /* Start both extreme count and cycle count */
+    extremeTachoMin = GetOutput(motor, TachoCount);
+    cycleCountMin = extremeTachoMin;
+
+    /* Wait for sensor to deactivate */
+    while (GetSensorProximity(sensor));
+
+    /* end count */
+    extremeTachoMax = GetOutput(motor, TachoCount);
+
+    /* Wait for sensor to activate again */
+    while (!GetSensorProximity(sensor));
+
+    /* End cycle count */
+    cycleCountMax = GetOutput(motor, TachoCount);
+
+    /* Stop the motor */
+    Off(motor);
+
+    /* Correct any error within cycle count */
+    cycleCount = cycleCountMax - cycleCountMin;
+    int errorCycleCount = cycleCount % CALIBERATION_ERROR_TOLERANCE;
+    if (errorCycleCount < CALIBERATION_ERROR_TOLERANCE/2)
+       cycleCount -= errorCycleCount;
+    else
+       cycleCount += CALIBERATION_ERROR_TOLERANCE - errorCycleCount;
+
+    /* Align the moter to neutral */
+    /* Move the tacho limit to neutralAlignment + 1/2 extreme sensor period */
+    alignDegrees = (cycleCount * postAlignmentPercentage)/100 +
+                    (extremeTachoMax - extremeTachoMin)/2;
+    RotateMotor(motor, MOTOR_POWER_FAST, alignDegrees);
+
+    return cycleCount;
+}
+
+#if 0
+task main ()
+{
+     int tiltCycleCount, strideCycleCount;
+     int currentPositionTilt = 0, currentPositionStride = 0;
+
+     SetSensorTouch(TOUCH_SENSOR);
+     SetSensorLight(LIGHT_SENSOR);
+
+     tiltCycleCount = CaliberateMotor(MOTOR_TILT, TOUCH_SENSOR, 0);
+     TextOut(0, LCD_LINE1, NumToStr(tiltCycleCount), true);
+
+     strideCycleCount = CaliberateMotor(MOTOR_STRIDE, LIGHT_SENSOR, 0);
+     TextOut(0, LCD_LINE2, NumToStr(strideCycleCount), false);
+     
+     RotateMotor(MOTOR_STRIDE, MOTOR_POWER_FAST, strideCycleCount/8);
+     RotateMotor(MOTOR_TILT, MOTOR_POWER_FAST, tiltCycleCount/4);
+}
+#endif
+

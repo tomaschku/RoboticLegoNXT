@@ -1,0 +1,72 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    HighPassFilter.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/**
+ * \file HighPassFilter.nxc
+ * \brief High Pass filter implementation
+ */
+
+#ifndef __HIGH_PASS_FILTER_H
+#define __HIGH_PASS_FILTER_H
+
+/**
+ * \brief High Pass filter contex
+ */
+struct HighPassFilterContext
+{
+   int RC;         /**< RC = 2 * PI * Freq */
+   int alpha1000;  /**< alpha constant. Scaled by 1000 for int ops */
+   int lastInput;  /**< last input processed by the filter. */
+   int lastOutput; /**< last output produced by the filter. */
+};
+
+/**
+ * \brief Initializes the given high pass filter context with the given
+ * RC constant and sampling rate. RC is given as 2 * PI * Freq (in cycles
+ * per second. Sampling rate is in samples per second.
+ */
+void
+HighPassFilterInit (HighPassFilterContext &context, int RC, int samplingRate)
+{
+    context.RC = RC;
+    /* alpha scaled by 1000 for int ops */
+    context.alpha1000 = (RC * samplingRate * 1000)/(RC * samplingRate + 1);
+    context.lastOutput = -1;
+    context.lastInput = -1;
+}
+
+/**
+ * \brief Steps through the filter using the current sample sampleInput.
+ * This must be called at the sampling rate given during initialization.
+ */
+int
+HighPassFilter (HighPassFilterContext &context, int sampleInput)
+{
+    if (context.lastOutput < 0)
+        context.lastOutput = sampleInput;
+    else
+        context.lastOutput = context.alpha1000 * (context.lastOutput + sampleInput - context.lastInput);
+    context.lastOutput /= 1000; /* Scaled down from int ops */
+    context.lastInput = sampleInput;
+    return context.lastOutput;
+}
+
+#endif
+

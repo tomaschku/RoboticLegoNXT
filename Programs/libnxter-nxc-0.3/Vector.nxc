@@ -1,0 +1,266 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Vector.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#ifndef __VECTOR_H_
+#define __VECTOR_H_
+
+#include "Debug.nxc"
+#include "Matrix.nxc"
+
+/**
+ * \file Vector.nxc
+ * \brief A simple 3-components vector implementation (2D point + direction)
+ *
+ * Note that this is not a 3D vector as in 3-dimentional
+ * coordinates system. It is more of a convenient package to put together
+ * a 2D point and a direction component associated with it. This is an
+ * important distinciton because many of the vector operations on this are
+ * only applicable to the x-y point, such as rotating it. For actual 3D vector,
+ * use Matrix instead.
+ */
+
+/**
+ * \brief A vector that represents a 2D point by x-y coordinates and a
+ * direction angle.
+ */
+struct Vector
+{
+    long x;         /**< x coordinate of the vector */
+    long y;         /**< y coordinate of the vector */
+    long theta;     /**< direction angle of the vector */
+};
+
+/**
+ * \brief Gets the vector members with an index number rather than component
+ * names. Useful in a loop.
+ */
+long VectorGet(Vector &a, int i)
+{
+    if (i == 0) return a.x;
+    if (i == 1) return a.y;
+    return a.theta;
+}
+
+/**
+ * \brief Sets the vector members with an index number rather than component
+ * names. Useful in a loop.
+ */
+void VectorSet(Vector &a, int i, long value)
+{
+    if (i == 0) a.x = value;
+    if (i == 1) a.y = value;
+    a.theta = value;
+}
+
+/**
+ * \brief Gets the polar distance of the given vector. It's the distance of
+ * its x-y coordicate from origin.
+ */
+long VectorGetDistance(Vector &a)
+{
+    long distance = (a.x * a.x) + (a.y * a.y);
+    distance = Sqrt(distance);
+    return distance;
+}
+
+/**
+ * \brief Gets the polar angle of the given vectors. It's the angle of
+ * its x-y coordinate from origin. it ranges from 0 to 360, 0 on x-axis facing
+ * +ve side and increasing anti-clockwise.
+ */
+int VectorGetAngle(Vector &a)
+{
+    long distance = VectorGetDistance(a);
+    long distanceRatio = ((a.x * 100)/distance);
+    int angle = Acos(distanceRatio);
+    if (angle > 0 && a.y < 0) angle = 360 - angle;
+    return angle;
+}
+
+/**
+ * \brief Gets the distance between given two vectors.
+ */
+long VectorGetDistanceVec(Vector &a, Vector &b)
+{
+    long distance = (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+    distance = Sqrt(distance);
+    return distance;
+}
+
+/**
+ * \brief Gets the angle of the line formed by the given two vectors.
+ */
+long VectorGetAngleVec(Vector &a, Vector &b)
+{
+    long distance = VectorGetDistanceVec(a, b);
+    long distanceRatio = (((b.x - a.x) * 100)/distance);
+    int angle = Acos(distanceRatio);
+    if (angle > 0 && (b.y - a.y) < 0) angle = 360 - angle;
+    return angle;
+}
+
+/**
+ * \brief Initializes the vector with given x, y and theta components
+ */
+void VectorInit(Vector &a, long x, long y, long theta)
+{
+    a.x = x;
+    a.y = y;
+    a.theta = theta;
+}
+
+/**
+ * \brief Initializes the vector with given distance and angle polar components.
+ *
+ * Note that 'angle' in the polar coordinate components is not the theta in
+ * the vector. 'angle' is part of coordinate that describes the location of
+ * of the point. theta, on the other hand, is the direction of the point and
+ * could be facing anywhere.
+ */
+void VectorInitPolar(Vector &a, long distance, int angle, int theta)
+{
+    a.x = (distance * Cos(angle))/100;
+    a.y = (distance * Sin(angle))/100;
+    a.theta = theta;
+}
+
+/**
+ * \brief Initializes the vector into a bound vector with the point given by
+ * x and y. Bound vector is a vector originating from world origin and
+ * pointing towards the given point. Hence theta is the direction of the (x,y)
+ * point w.r.t origin.
+ */
+void VectorInitBound(Vector &retVec, long x, long y)
+{
+    retVec.x = x;
+    retVec.y = y;
+    retVec.theta = VectorGetAngle(retVec);
+}
+
+/**
+ * \brief Translate the vector point to a new point moved the given distance
+ * towards the given direction angle.
+ *
+ * Note that the theta (direction) component in the vector is unaffected.
+ */
+void VectorTranslate(Vector &a, long distance, int angle)
+{
+    a.x = a.x + ((distance * Cos(angle))/100);
+    a.y = a.y + ((distance * Sin(angle))/100);
+}
+
+/**
+ * \brief Adds vector b to a. i.e. a += b
+ */
+void VectorAdd(Vector &a, Vector &b)
+{
+    a.x += b.x;
+    a.y += b.y;
+    a.theta += b.theta;
+}
+
+/**
+ * \brief Subtracts vector b from a. i.e. a -= b
+ */
+void VectorSubtract(Vector &a, Vector &b)
+{
+    a.x -= b.x;
+    a.y -= b.y;
+    a.theta -= b.theta;
+}
+
+/**
+ * \brief Scales x and y vector components by the given factor. i.e. a = a * S
+ */
+void VectorScale(Vector &a, long S)
+{
+    a.x *= S;
+    a.y *= S;
+}
+
+/**
+ * \brief Reduces x and y vector components by the given factor. i.e. a = a / S
+ */
+void VectorReduce(Vector &a, long S)
+{
+    a.x /= S;
+    a.y /= S;
+}
+
+/**
+ * \brief Rotates the point in the vector by given angle. The direction
+ * component in the vector is not touched.
+ */
+void VectorRotate(Vector &vec, long theta)
+{
+    long newX = (vec.x * Cos(theta) - vec.y * Sin(theta))/100;
+    long newY = (vec.x * Sin(theta) + vec.y * Cos(theta))/100;
+    vec.x = newX;
+    vec.y = newY;
+}
+
+/**
+ * \brief Rotates the point in the vector by given angle around the pivot
+ * point given by pivotX and pivotY. The direction component in the vector
+ * is not touched.
+ */
+void VectorRotateAtPoint(Vector &vec, long theta, long pivotX, long pivotY)
+{
+    vec.x -= pivotX;
+    vec.y -= pivotY;
+    long newX = (vec.x * Cos(theta) - vec.y * Sin(theta))/100;
+    long newY = (vec.x * Sin(theta) + vec.y * Cos(theta))/100;
+    vec.x = newX + pivotX;
+    vec.y = newY + pivotY;
+}
+
+/**
+ * \brief Transforms the given vector with the given transformation matrix
+ * and returns the transformed vector in retVec. retVector must be different
+ * from input vector because they are passed as reference. Vector transformation
+ * is just multiplying the (column) vector with the transformation matrix.
+ */
+void VectorTransform(Vector &vec, Matrix &matrix, Vector &retVec)
+{
+    ASSERT(matrix.rows == 3 && matrix.cols == 3,
+           "Transformation matrix is not 3x3");
+    
+    retVec.x =     MatrixGet(matrix, 0, 0) * vec.x +
+                   MatrixGet(matrix, 0, 1) * vec.y +
+                   MatrixGet(matrix, 0, 2) * vec.theta;
+    retVec.y =     MatrixGet(matrix, 1, 0) * vec.x +
+                   MatrixGet(matrix, 1, 1) * vec.y +
+                   MatrixGet(matrix, 1, 2) * vec.theta;
+    retVec.theta = MatrixGet(matrix, 2, 0) * vec.x +
+                   MatrixGet(matrix, 2, 1) * vec.y +
+                   MatrixGet(matrix, 2, 2) * vec.theta;
+}
+
+void VectorPrint(Vector &vec, string name, int waitPeriod)
+{
+    TextOut(0, LCD_LINE1, name, true);
+    NumOut(0, LCD_LINE2, vec.x, false);
+    NumOut(0, LCD_LINE3, vec.y, false);
+    NumOut(0, LCD_LINE4, vec.theta, false);
+    Wait(waitPeriod);
+}
+
+#endif /* __VECTOR_H_ */
+

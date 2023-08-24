@@ -1,0 +1,45 @@
+// include the boost library
+#include "console.nxc"
+
+
+// 3. Example
+// adapt the console
+task main()
+{
+   // lets say we want this header over the console
+   TextOut(18, LCD_LINE1, "MY CONSOLE");
+
+   // the console should start at 3. line
+   initConsole(3);
+
+   // we want to use 500ms as standard wait time not 0
+   setConsoleTime(500);
+
+   // now print some stuff
+   for(int i; i<10; i++) {
+      coutNum(i, 0, false); cout(". Line");
+   }
+   // You do not have to carry about your header
+   // it will stay there
+
+   // reset old console
+   resetConsole();
+   Wait(1000);
+
+   // Lets say we want a frame around our console
+   RectOut(5, 5, 90, 45);
+
+   // Set the console borders into the frame
+   // its importent that you look if everything is ok
+   if ( initConsole(3, 7, 10, 91) ) {
+      // print some stuff
+      for(int i; i<10; i++) {
+         coutNum(i, 0, false); cout(". Line Test full line", 500);
+      }
+   }
+   // now clear only the console
+   resetConsole();
+
+   until( kbhit() );
+}
+

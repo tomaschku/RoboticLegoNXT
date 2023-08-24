@@ -1,0 +1,176 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    PID.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#ifndef _PID_CONTROLLER_H_
+#define _PID_CONTROLLER_H_
+
+/**
+ * \file PID.nxc
+ * \brief Generic PID controller implementation
+ */
+
+/**
+ * \brief PID controller class
+ */
+struct PIDControl
+{
+    long PIDScale;                   /**< The scale of P, I, D values */
+    long PValue;                     /**< P value */
+    long IValue;                     /**< I value */
+    long DValue;                     /**< D value */
+    long setPoint;                   /**< Current set point */
+    int steadyStateCountThreshold;   /**< Threshold count for ending control
+                                          if the error stays that many steps
+                                          unchanged */
+    
+    /* Output parameters */
+    long outputGain;                  /**< Output gain to multiply PID output to get output */
+    long absMaxOutput;                /**< Maximum absolute value the output can take */
+    long absIntegralLimit;            /**< Maximum absolute value the integral output can take */
+
+    /* State */                       /**< Current error integral */
+    long integral;                    /**< Error during last step */
+    long lastError;                   /**< Number of samples error hasn't changed */
+    long steadyStateCount;
+};
+
+/**
+ * \brief Initializes a PID controller with the given P, I and D values, output parameters.
+ *
+ * The P, I and D
+ * parameters are normally fractions and to accomodate them in integer form,
+ * they should be scaled by a number. The scale value is given as PIDScale
+ * (1000 is a good choice). If error does not change for
+ * 'steadyStateCountThreshold' many steps, the control is ended. It could be
+ * either because the system state has settled (error stays at 0) or it is stuck,
+ * in which case it is usually good to end to avoid overloading.
+ * If steadyStateCountThreshold is given as '0', the PID controller
+ * runs in continous mode and the control never ends. When running
+ * PIDController in continous mode, keep setting new set points with
+ * PIDControlSetPoint() as needed. outputGain is the multiplying factor to
+ * current PID output to get actual output. The output is clipped, both positive
+ * side and negative side, at the absolute value absMaxOutput.
+ */
+void PIDControlInit(PIDControl &pidControl, long PIDScale,
+                    long PValue, long IValue, long DValue,
+                    int steadyStateCountThreshold,
+                    long outputGain, long absMaxOutput)
+{
+    pidControl.PIDScale = PIDScale;
+    pidControl.PValue = PValue;
+    pidControl.IValue = IValue;
+    pidControl.DValue = DValue;
+    pidControl.steadyStateCountThreshold = steadyStateCountThreshold;
+    pidControl.outputGain = outputGain;
+    pidControl.absMaxOutput = Abs(absMaxOutput);
+    pidControl.absIntegralLimit = pidControl.absMaxOutput;
+    pidControl.setPoint = 0;
+    pidControl.integral = 0;
+    pidControl.lastError = 0;
+    pidControl.steadyStateCount = 0;
+}
+
+/**
+ * \brief Sets integral output absolute maximum used to prevent integral
+ * windup. The default is set to absMaxOutput.
+ */
+void PIDControlSetIntegralLimit(PIDControl &pidControl, long absIntegralLimit)
+{
+    pidControl.absIntegralLimit = Abs(absIntegralLimit);
+}
+
+/**
+ * \brief Sets a new set point for the controller. The controller state
+ * is reset and the new target is pursued.
+ */
+void PIDControlSetPoint(PIDControl &pidControl, long setPoint)
+{
+    pidControl.setPoint = setPoint;
+    pidControl.integral = 0;
+    pidControl.steadyStateCount = 0;
+}
+
+/**
+ * \brief Checks if the PID controller has ended.
+ *
+ * PID controller ends if
+ * it has settled at set point for steadyStateCountThreshold steps, or it is
+ * not changing that steadyStateCountThreshold many steps (usually because
+ * of system overload and therefore ending is good). When the controller is
+ * ended it only outputs 0. If the controller is running in continous mode,
+ * i.e. steadyStateCountThreshold = 0, this method always return false.
+ */
+bool PIDControlCheckEnd(PIDControl &pidControl)
+{
+    if (pidControl.steadyStateCount > pidControl.steadyStateCountThreshold)
+        return true;
+    else
+        return false;
+}
+
+/**
+ * \brief Gets the error from the last step
+ */
+long PIDControlGetLastError(PIDControl &pidControl)
+{
+    return pidControl.lastError;
+}
+
+/**
+ * \brief Steps the PID controller. currentPoint is the current state of
+ * the system. The return value is the output of the controller that should
+ * be applied to the input of the system (e.g. motor). Call this method in
+ * regular (sampling) period.
+ */
+long PIDControlStep(PIDControl &pidControl, long currentPoint)
+{
+    long P, I, D, error, output;
+    
+    if (PIDControlCheckEnd(pidControl))
+        return 0;
+
+    error = pidControl.setPoint - currentPoint;
+
+    /* If error hasn't changed for last steadyStateCountThreshold samples, end PID control */
+    if (pidControl.steadyStateCountThreshold > 0 && (error - pidControl.lastError) == 0)
+        pidControl.steadyStateCount++;
+
+    P = ((pidControl.PValue * error) / pidControl.PIDScale);
+    I = pidControl.integral + ((pidControl.IValue * error) / pidControl.PIDScale);
+    D = ((pidControl.DValue) * (error - pidControl.lastError)) / pidControl.PIDScale;
+
+    /* Limit integral output */
+    if (I > (pidControl.absIntegralLimit/pidControl.outputGain))
+       I = pidControl.absIntegralLimit;
+    if (I < -(pidControl.absIntegralLimit/pidControl.outputGain))
+       I = -pidControl.absIntegralLimit;
+
+    output = pidControl.outputGain * (P + I + D);
+    if (output > pidControl.absMaxOutput) output = pidControl.absMaxOutput;
+    if (output < -pidControl.absMaxOutput) output = -pidControl.absMaxOutput;
+
+    pidControl.integral = I;
+    pidControl.lastError = error;
+    
+    return output;
+}
+
+#endif
+

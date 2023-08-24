@@ -1,3 +1,4 @@
+//The Error "task main not found" is normal! DO NOT ADD TASK MAIN HERE!
 //Here are functions not natively provided by NXC
 
 bool str_isEmpty(string str)

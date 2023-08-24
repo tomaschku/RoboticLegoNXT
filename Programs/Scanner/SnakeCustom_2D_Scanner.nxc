@@ -10,7 +10,7 @@
 #define TSY S3 //Touch Sensor Y
 
 #define SCAN_X 33 //How many times to scan on the X-Axe
-#define LineWidth 3 //How wide the pixel should be (Search for algorythm to auto-calculate)
+#define LineWidth 3 //How wide the pixel should be (Search for algorithm to auto-calculate)
 
 void Status(string str);
 

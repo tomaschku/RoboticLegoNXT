@@ -1,0 +1,26 @@
+
+// For this example we do not need a Task
+// Now the functions are like RotateMotor from nxc api
+// define before include!
+#define NO_CONTROLLER_TASK_SERVICE
+
+#include "motorcontrollerRWTH.nxc"
+
+task main()
+{
+   // clean
+   resetErrorCorrection(OUT_A);
+   Wait(10);
+
+   // output, power, angle
+   moveRel(OUT_A, 100, 180);
+   
+   Wait(500);
+   
+   // You may use nxc api functions
+   OnRev(OUT_A, 50);
+   
+   Wait(1000);
+   Off(OUT_A);
+   Wait(1000);
+}

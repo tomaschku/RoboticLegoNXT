@@ -1,0 +1,79 @@
+
+// This is almost the same as ex_debug1
+// This time we use a file to save debug messages
+
+// include the library
+#include "console.nxc"
+#include "debug-file.nxc"
+#include "debug-console.nxc"
+
+// This are our debug classes
+// you can see they belong to different
+// code
+#define CLASS_MAIN  0
+#define CLASS_INIT  1
+#define CLASS_MOTOR 2
+#define CLASS_COM   3
+
+// This are the debug flags
+// Set one flag true if you
+// want debug messages from this class
+#define DEBUG_FULL  TRUE
+#define DEBUG_INIT  FALSE
+#define DEBUG_MOTOR FALSE
+#define DEBUG_COM   FALSE
+
+
+// Ex 1.
+// simple
+// show debug messages with a debug console and save the msg into file
+task main()
+{
+   // we have 3 own classes
+   // note that CLASS_MAIN is always included!
+   initClass(3);
+
+   // now we need a console and a debug file
+   initConsole();
+   byte handle;
+   DeleteFile("log.txt");
+   CreateFile("log.txt", 1024, handle);
+   
+   // init the modules
+   initConsoleDebug();
+   // give the module the debug file
+   initFileDebug(handle);
+
+   setConsoleDebugTime(SEC_1);
+
+   // give the class system the flags
+   setClassFlag(CLASS_MAIN,  DEBUG_FULL);
+   setClassFlag(CLASS_INIT,  DEBUG_INIT);
+   setClassFlag(CLASS_MOTOR, DEBUG_MOTOR);
+   setClassFlag(CLASS_COM,   DEBUG_COM);
+
+   // independent from debug flags
+   // but it uses the debug standard parameter
+   coutDebug("Main Message");
+   writeDebug("Main Message");
+
+   // now play around with the flags (true/false)
+   // and see which messages are printed in the console
+   coutDebug("Class Init",  CLASS_INIT);
+   coutDebug("Class Motor", CLASS_MOTOR);
+   coutDebug("Class Com",   CLASS_COM);
+
+   // into file
+   writeDebug("Class Init",  CLASS_INIT);
+   writeDebug("Class Motor", CLASS_MOTOR);
+   writeDebug("Class Com",   CLASS_COM);
+   
+   // Close the file!
+   CloseFile("log.txt");
+   
+   cout("");
+   cout("Wait Button..");
+   until( kbhit() );
+}
+
+

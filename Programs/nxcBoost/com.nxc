@@ -1,0 +1,331 @@
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/**
+* @file com.nxc
+* \ingroup utilities
+*
+* @brief Easy functions for communication.
+*
+**/
+
+/*
+   CHANGELOG:
+   TODO:
+   BUGS:
+*/
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+#ifndef __COM_H_
+#define __COM_H_
+
+/// \cond
+// Membervariables
+struct sCom
+{
+   byte Outbox;
+   unsigned long SendTime;
+   
+   byte Inbox;
+   unsigned long Timeout;
+   unsigned int  PollingTime;
+};
+sCom mCom;
+
+/// \endcond
+
+/**
+ * \brief Initialize the communication module.
+ *
+ * Use this to initialize the communication module.
+ * The paramters are set to default values.
+ * Standard send-time = 0 ms, polling-time = 25ms, timeout = 1s.
+ * You can initialize the com-module with standard
+ * in/outbox.
+ *
+ * \param outbox      Set default outbox for sending messages.
+ *                    (0-8)
+ * \param inbox       Set default inbox for sending messages.
+ *                    (0-8)
+*/
+void initCom(const byte outbox = 0,
+             const byte inbox = 0)
+{
+   mCom.SendTime = 0;    // nxt-pc-hmi minimal time 20ms
+
+   
+   mCom.Outbox = outbox;
+   mCom.Inbox = inbox;
+   
+   mCom.Timeout = 1000;
+   mCom.PollingTime = 25;
+}
+
+
+/**
+ * \brief Clean inbox.
+ *
+ * This functions removes all messages from the the specified mailbox inbox.
+ * If the mailbox number is negative, then all mailboxes will be cleaned.
+ *
+ * \param mailbox   Inbox 0-9 or any negative number.
+*/
+void purgeMailbox(byte mailbox)
+{
+   string in;
+   if(mailbox >= 0) {
+      do {
+         in = "";
+         ReceiveRemoteString(mailbox, true, in);
+      } while(StrLen(in) > 0);
+   }
+   else {
+      for(int i = MAILBOX1; i < MAILBOX10+1; i++) {
+         do {
+            in = "";
+            ReceiveRemoteString(i, true, in);
+         } while(StrLen(in) > 0);
+      }
+   }
+}
+
+
+/**
+ * \brief Set default send-time
+ *
+ * You may set a new default send time.
+ * Standard wait-time is 0.
+ * (NXT-PC-HMI checks every 20 ms Msg-Box)
+ * The send-time is used after every send function.
+ *
+ * \param sendTime Time in milliseconds.
+*/
+void setComTime(const unsigned long sendTime)
+{
+   mCom.SendTime = sendTime;
+}
+
+
+/**
+ * \brief Set default outbox.
+ *
+ * You may set a new default outbox.
+ * Standard outbox is 0.
+ *
+ * \param outbox See nxc api for more information.
+*/
+void setComOutbox(const byte outbox)
+{
+   mCom.Outbox = outbox;
+}
+
+
+/**
+ * \brief Set default inbox.
+ *
+ * You may set a new default inbox.
+ * Standard inbox is 0.
+ *
+ * \param inbox See nxc api for more information.
+*/
+void setComInbox(const byte inbox)
+{
+   mCom.Inbox = inbox;
+}
+
+
+/**
+ * \brief Set default timeout.
+ *
+ * You may set a new default timeout.
+ * Timeout for trying to receive a message.
+ * Standard = 1sec.
+ *
+ * \param timeout Time in milliseconds.
+*/
+void setComTimeout(const unsigned long timeout)
+{
+   mCom.Timeout = timeout;
+}
+
+
+/**
+ * \brief Set default polling-time.
+ *
+ * You may set a new default polling time.
+ * Polling time is the time between to attempts
+ * for receiving messages.
+ * Standard = 1sec.
+ *
+ * \param pollingTime Time in milliseconds.
+*/
+void setComPollingTime(const unsigned long pollingTime)
+{
+   mCom.PollingTime = pollingTime;
+}
+
+
+/**
+  * \brief Send a string to outbox.
+  *
+  *  Send a string to specified outbox and wait for sendTime ms.
+  *  Designed for simplicity: send("No other parameters");
+  *
+  * \param  message      Any String. (Text)
+  * \param  sendTime         Wait time in ms, not essential.
+  * \param  outbox       See nxc api and outbox constants. (0-8)
+  * \return              A char value indicating whether
+  *                      the function call succeeded or not.
+*/
+char send(const string message,
+          unsigned long sendTime = NA,
+          byte outbox = NA)
+{
+   char temp;
+
+   if(sendTime == NA)
+      sendTime = mCom.SendTime;
+   if(outbox == UCHAR_MAX)
+      outbox  =  mCom.Outbox;
+   temp = SendResponseString(outbox, message);
+   Wait(sendTime);
+   return temp;
+}
+
+
+
+/**
+  *  \brief Send a number to outbox.
+  *
+  *  Send a number to specified outbox and wait for sendTime ms.
+  *  Designed for simplicity: send(10.1);
+  *
+  * \param  number       Any number.
+  * \param  time         Wait time in ms, not essential.
+  * \param  outbox       See nxc api and outbox constants. (0-8)
+  * \return              A char value indicating whether
+  *                      the function call succeeded or not.
+*/
+char sendNum(float number,
+                    unsigned long time = NA,
+                    byte outbox = NA)
+{
+   string message;
+   message = NumToStr(number);
+
+   return send(message, time, outbox);
+}
+
+
+/**
+  *  \brief Send formatted data to outbox.
+  *
+  *  Send formatted data to specified outbox and wait for sendTime ms.
+  *
+  * \param  format       A string specifying the desired format.
+  *                      See nxc api sprintf or ex_console.
+  * \param  number       The number to send in the specified format.
+  * \param  time         Wait time in ms, not essential.
+  * \param  outbox       See nxc api and outbox constants. (0-8)
+  * \return              A char value indicating whether
+  *                      the function call succeeded or not.
+*/
+char sendF(const string format, const float number,
+                  unsigned long time = NA,
+                  byte outbox = NA)
+{
+   string message;
+   sprintf(message, format, number);
+
+   return send(message, time, outbox);
+}
+
+
+/**
+ * \brief Try to receive an string.
+ *
+ * Wait until theres a string in the specified inbox.
+ * You may set a timeout if you want to wait a longer or shorter period.
+ * If there is no message in the given timeout, the function will return an error
+ * string.
+ * Note that this function is also designed for simplicity:
+ * myMsg = receiveString();
+ *
+ * \param inString        The received string
+ * \param inbox           See nxc api or inbox constants.
+ * \param timeout         Timeout in ms if theres no message in the inbox.
+ * \param pollingTime     The time to wait between every request in ms.
+ *
+ * \return                False if there is an error. (timeout)
+*/
+bool receiveString(string &inString,
+                   byte inbox = NA,
+                   unsigned long timeout = NA,
+                   unsigned int pollingTime = NA)
+{
+   if(inbox == UCHAR_MAX)
+      inbox = mCom.Inbox;
+   if(pollingTime == NA)
+      pollingTime = mCom.PollingTime;
+   if(timeout == NA)
+      timeout = mCom.Timeout;
+
+   string temp = "";
+
+   int i;
+   do {
+      ReceiveMessage(inbox, true, temp);
+      if(StrLen(temp) > 0)
+         break;
+      
+      Wait(pollingTime);
+      i++;
+   } while(i*pollingTime <= timeout)
+
+   if(i*pollingTime <= timeout) {
+      inString = temp;
+      return true;
+   }
+   else {
+      return false;
+   }
+}
+
+
+
+/**
+ * \brief Try to receive an number.
+ *
+ * Wait until theres a number in the specified inbox.
+ * You may set a timeout if you want to wait a longer or shorter period.
+ * If there is no message in the given timeout, the function will return false
+ * Note that this function is also designed for simplicity:
+ * receiveString(myMsg);
+ *
+ * \param inNumber        The received number.
+ *                        Number should be a floating-point number.
+ * \param inbox           See nxc api or inbox constants.
+ * \param timeout         Timeout in ms if theres no message in the inbox.
+ * \param pollingTime     The time to wait between every request in ms.
+ *
+ * \return                False if there is an error. (timeout)
+*/
+inline bool receiveNum(float &inNumber,
+                       byte inbox = NA,
+                       unsigned int pollingTime = NA,
+                       unsigned long timeout = NA)
+{
+   string in;
+   bool ret;
+   ret = receiveString(in, pollingTime, timeout);
+   inNumber = atof(in);
+   return ret;
+}
+
+
+#endif
+
+
+
+
+

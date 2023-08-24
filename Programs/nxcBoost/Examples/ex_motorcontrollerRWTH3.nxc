@@ -1,0 +1,22 @@
+
+#include "motorcontrollerRWTH.nxc"
+
+task main()
+{
+   start Motor_Controller_Task;
+   Yield();   // Let the Task some time to start up
+   Wait(10);
+
+   // move both motors
+   moveRel(OUT_A, 100, 1000, true, true, false, false);
+   moveRel(OUT_B, 100, 1000, true, true, false, false);
+
+   Wait(1000);
+   TextOut(0, LCD_LINE1, "Emergency Stop!!");
+   motorEmergencyStop(false);
+   // If you set the to true you will not be able to see this
+   TextOut(0, LCD_LINE2, "Done.. end program");
+
+   Wait(3000);
+}
+

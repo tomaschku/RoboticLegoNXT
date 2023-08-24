@@ -1,0 +1,84 @@
+
+
+// include the library
+#include "debug-console.nxc"
+
+// This are our debug classes
+// you can see they belong to different
+// code
+#define CLASS_MAIN  0
+#define CLASS_INIT  1
+#define CLASS_MOTOR 2
+#define CLASS_COM   3
+
+// This are the debug flags
+// Set one flag true if you
+// want debug messages from this class
+#define DEBUG_FULL  TRUE
+#define DEBUG_INIT  FALSE
+#define DEBUG_MOTOR FALSE
+#define DEBUG_COM   FALSE
+
+
+// Ex 2
+// Working with scopes
+task main()
+{
+   initClass(3);
+   
+   initConsole();
+   initConsoleDebug();
+
+   setClassFlag(CLASS_MAIN,  DEBUG_FULL);
+   setClassFlag(CLASS_INIT,  DEBUG_INIT);
+   setClassFlag(CLASS_MOTOR, DEBUG_MOTOR);
+   setClassFlag(CLASS_COM,   DEBUG_COM);
+
+   coutDebug("Main Message");
+
+   // lets say we have 100 lines code now
+   // which are only motor commands
+   // so we do not want always write..
+   coutDebug("Class Motor", CLASS_MOTOR);
+   
+   //set begin of the scope
+   setClassScopeBegin(CLASS_MOTOR);
+   
+   // Now we can simply write
+   coutDebug("Class Motor1");
+   coutDebug("Class Motor2");
+   coutDebug("Class Motor3");
+   coutDebug("Class Motor4");
+   // if you set DEBUG_MOTOR to false
+   // no motor msg will be displayed!
+   
+   //set scope end
+   setClassScopeEnd(); // CLASS_MOTOR
+   
+   
+   
+   /*********************************/
+   
+   // note that scopes do not have any
+   // effect if you use
+   // the second parameter (class)
+   
+   setClassScopeBegin(CLASS_MOTOR);
+   
+   coutDebug("Class Init",  CLASS_INIT);
+   coutDebug("Class Com",   CLASS_COM);
+
+   // since only one class scope can be used at the same
+   // time and class_main is a scope over the hole code
+   // you have to write .. in scopes
+   coutDebug("Main Message1", CLASS_MAIN);
+
+   setClassScopeEnd();
+
+   cout(" ");
+   cout("Wait Button..");
+   until( kbhit() );
+}
+
+
+

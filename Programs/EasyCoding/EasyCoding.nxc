@@ -1,6 +1,7 @@
-//This is so (my) existing programs still work
+//"../EasyCoding/.nxc" has been used because of the compiler no understanding "/.nxc"
 #include "../EasyCoding/Rect.nxc"
 #include "../EasyCoding/MoreStrings.nxc"
+#include "../EasyCoding/Bluetooth.nxc"
 
 #define CHAR_HEIGHT 8
 #define CHAR_WIDTH 5

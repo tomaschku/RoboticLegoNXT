@@ -1,0 +1,40 @@
+#include "algorithm.nxc"
+#include "console.nxc"
+
+
+// Ex 1
+// resize arrays dynamically
+task main()
+{
+   initConsole();
+   setConsoleTime(SEC_1);
+
+   // init a new array with size 3
+   int myArray[] = {1, 2, 3};
+
+   // show size of the array
+   coutF("Size before = %.0f", ArrayLen(myArray) );
+
+   // now resize it so we can fill it with more data
+   arrayResize(myArray, 6);
+
+   // show size of the array
+   coutF("Size now = %.0f", ArrayLen(myArray) );
+
+   // now you can fill the array with more data
+   myArray[4] = 5;
+   myArray[5] = 6;
+
+   // show array data
+   for(int i; i < ArrayLen(myArray); ++i) {
+      coutF("myArray[%.0f] = ", i, 0, false);
+      coutNum(myArray[i]);
+   }
+   
+   // You can also resize to a smaler value as origin size
+   // This may be interesting if you do not need the array anymore to save ram
+   arrayResize(myArray, 0);
+
+   until( kbhit() );
+}
+

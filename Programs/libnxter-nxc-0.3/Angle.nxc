@@ -1,0 +1,164 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Angle.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#ifndef __ANGLE_H_
+#define __ANGLE_H_
+
+/**
+ * \file Angle.nxc
+ * \brief Provides simple arithmetic for absolute and relative angles.
+ *
+ * Absolute angle is the world coordinate angle which ranges in 0 .. 360,
+ * where 0 lies on x-axis towards the positive side and increses on anti-clockwise
+ * rotation. Relative angle is an angle value that ranges in -180 .. +180,
+ * and is mostly useful in places where angle value is used to directly
+ * influence some other factor (such as in a motor control). There are times
+ * when they need to be interchanged depending on the context. This file
+ * provides the necessary conversion routines and simple arithmetics for
+ * working with absolute and relative angles. Arithmetics take care of wrapping
+ * the angles correctly.
+ */
+
+#include "Debug.nxc"
+
+/**
+ * \brief Converts absolute angle (0 .. 360) to relative angle (-180 .. 180)
+ */
+inline int AngleAbsToRel(int absAngle)
+{
+    if (absAngle > 180)
+        return (absAngle - 360);
+    return absAngle;
+}
+
+/**
+ * \brief Converts relative angle (-180 .. 180) to absolute angle (0 .. 360)
+ */
+inline int AngleRelToAbs(int relAngle)
+{
+    if (relAngle < 0)
+        return (relAngle + 360);
+    return relAngle;
+}
+
+/**
+ * \brief Adds angle to an absolute angle (0 .. 360) absAngleA. Returns
+ *  an absolute angle properly truncated to stay in (0 .. 360) range.
+ */
+inline int AngleAbsAdd(int absAngleA, int angle)
+{
+    int val = (absAngleA + angle) % 360;
+    if (val < 0) val += 360;
+    return val;
+}
+
+/**
+ * \brief Subtracts angle from an absolute angle (0 .. 360) absAngleA.
+ * Returns an absolute angle properly truncated to stay in (0 .. 360) range.
+ */
+inline int AngleAbsSub(int absAngleA, int angle)
+{
+    int val = (absAngleA - angle) % 360;
+    if (val < 0) val += 360;
+    return val;
+}
+
+/**
+ * \brief Adds angle to a relative angle (-180 .. 180) relAngleA. Returns
+ *  a relative angle properly truncated to stay in (-180 .. 180) range.
+ */
+inline int AngleRelAdd(int relAngleA, int angle)
+{
+    int val = relAngleA + angle;
+    val %= 360;
+    if (val > 180) val -= 360;
+    if (val < -180) val += 360;
+    return val;
+}
+
+/**
+ * \brief Subtracts angle from a relative angle (-180 .. 180) relAngleA. Returns
+ *  a relative angle properly truncated to stay in (-180 .. 180) range.
+ */
+inline int AngleRelSub(int relAngleA, int angle)
+{
+    int val = relAngleA - angle;
+    val %= 360;
+    if (val > 180) val -= 360;
+    if (val < -180) val += 360;
+    return val;
+}
+
+/* Tests */
+
+#ifdef ENABLE_TEST
+
+/**
+ * \brief Uint tests for the matrix implementation. Use for development only.
+ */
+void TestAngle()
+{
+    TEST((AngleAbsToRel(10) == 10), "AbsToRel 10");
+    TEST((AngleAbsToRel(270) == -90), "AbsToRel 270");
+    TEST((AngleAbsToRel(0) == 0), "AbsToRel 0");
+    TEST((AngleAbsToRel(181) == -179), "AbsToRel 181");
+    TEST((AngleAbsToRel(180) == 180), "AbsToRel 180");
+    TEST((AngleAbsToRel(360) == 0), "AbsToRel 360");
+    
+    TEST((AngleRelToAbs(10) == 10), "AbsToRel 10");
+    TEST((AngleRelToAbs(-90) == 270), "AbsToRel -90");
+    TEST((AngleRelToAbs(0) == 0), "AbsToRel 0");
+    TEST((AngleRelToAbs(-179) == 181), "AbsToRel -179");
+    TEST((AngleRelToAbs(180) == 180), "AbsToRel 180");
+    TEST((AngleRelToAbs(-180) == 180), "AbsToRel -180");
+
+    TEST((AngleAbsAdd(270, 100) == 10), "AbsAdd 100");
+    TEST((AngleAbsAdd(270, -100) == 170), "AbsAdd -100");
+    TEST((AngleAbsAdd(0, 10) == 10), "AbsAdd 10");
+    TEST((AngleAbsAdd(0, -10) == 350), "AbsAdd -10");
+    TEST((AngleAbsAdd(10, 500) == 150), "AbsAdd 500");
+    TEST((AngleAbsAdd(180, 180) == 0), "AbsAdd 180");
+
+    TEST((AngleAbsSub(270, 100) == 170), "AbsSub 100");
+    TEST((AngleAbsSub(270, -100) == 10), "AbsSub -100");
+    TEST((AngleAbsSub(0, 10) == 350), "AbsSub 10");
+    TEST((AngleAbsSub(0, -10) == 10), "AbsSub -10");
+    TEST((AngleAbsSub(10, 500) == 230), "AbsSub 500");
+    TEST((AngleAbsSub(180, 180) == 0), "AbsSub 180");
+
+    TEST((AngleRelAdd(170, 100) == -90), "RelAdd 100");
+    TEST((AngleRelAdd(10, -100) == -90), "RelAdd -100");
+    TEST((AngleRelAdd(0, 10) == 10), "RelAdd 10");
+    TEST((AngleRelAdd(0, -10) == -10), "RelAdd -10");
+    TEST((AngleRelAdd(10, 500) == 150), "RelAdd 500");
+    TEST((AngleRelAdd(10, -500) == -130), "RelAdd -500");
+    TEST((AngleRelAdd(180, 180) == 0), "RelAdd 180");
+
+    TEST((AngleRelSub(270, 100) == 170), "RelSub 100");
+    TEST((AngleRelSub(270, -100) == 10), "RelSub -100");
+    TEST((AngleRelSub(0, 10) == -10), "RelSub 10");
+    TEST((AngleRelSub(0, -10) == 10), "RelSub -10");
+    TEST((AngleRelSub(10, 500) == -130), "RelSub 500");
+    TEST((AngleRelSub(180, 180) == 0), "RelSub 180");
+}
+
+#endif /* ENABLE_TEST */
+#endif __ANGLE_H_
+

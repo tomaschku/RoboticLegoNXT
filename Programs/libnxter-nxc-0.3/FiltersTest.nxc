@@ -1,0 +1,75 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    FiltersTest.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/**
+ * \file FiltersTest.nxc
+ * \brief A simple test program for testing high/low filters
+ */
+#include "Sampler.nxc"
+#include "LowPassFilter.nxc"
+#include "HighPassFilter.nxc"
+
+#define LIGHT_SENSOR IN_3
+#define LIGHT_SENSOR_SAMPLING_PERIOD 36 /* degrees */
+#define LIGHT_SENSOR_SAMPLING_RATE   30 /* samples per cycle (1080 degrees) */
+
+task
+main ()
+{
+    int t = 0;
+    int x1 = 0, x2 = 0;
+    int max = 0;
+    SamplerContext sampler;
+    HighPassFilterContext highPass;
+    LowPassFilterContext lowPass;
+
+    SetSensorLight(LIGHT_SENSOR);
+    ClearScreen();
+    ResetAllTachoCounts(OUT_B);
+    SamplerInit(sampler, 0, LIGHT_SENSOR_SAMPLING_PERIOD);
+    HighPassFilterInit(highPass, 3 /* 0.5Hz * 2 * PI */, LIGHT_SENSOR_SAMPLING_RATE);
+    LowPassFilterInit(lowPass, 24 /* 4Hz * 2 * PI */, LIGHT_SENSOR_SAMPLING_RATE);
+
+    OnFwd(OUT_B, 100);
+    while (1)
+    {
+        int tachoCount = GetOutput(OUT_B, TachoCount);
+        int lightSense = Sensor(LIGHT_SENSOR);
+
+        do {
+            int lightSenseSample = SamplerGet(sampler, tachoCount, lightSense);
+            if (lightSenseSample < 0)
+                break;
+            int highPassOut = HighPassFilter(highPass, lightSenseSample);
+            int lowPassOut = LowPassFilter(lowPass, highPassOut);
+
+            /* Plot both intput and output samplings */
+            //LineOut(t, 48, t, 48 + lightSense - 50, false);
+            LineOut(t,  16, t, 16 + lowPassOut, false);
+            t++;
+            if (t >= 60)
+            {
+               ClearScreen();
+               t = 0;
+            }
+        } while (sampler.hasMore);
+    }
+}
+
+

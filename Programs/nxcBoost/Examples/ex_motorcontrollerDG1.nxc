@@ -1,0 +1,23 @@
+
+
+
+#include "motorcontrollerDG.nxc"
+
+task main()
+{
+   // we need only 1 motor (save process time and memory)
+   initMc(1);
+
+   // output, angle, power
+   moveRel(OUT_A, 180, 70);
+   
+   Wait(500);
+   
+   // thats not essential but its clean
+   // you may use normal nxc api motor functions after this..
+   // shut down controller
+   controllerOff();
+   Yield();
+   Wait(10);
+   stop Motor_Controller_Task;
+}

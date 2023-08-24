@@ -1,0 +1,557 @@
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/**
+* @file motorcontrollerDG.nxc
+* \ingroup motorcontroller
+*
+* @brief Background task and high level routines to control motors.
+*
+* Originator: David Gilday   <br>
+* <http://mindcuber.com/>    <br>
+* Edit: Martin Aumair        <br>
+**/
+
+/*
+   CHANGELOG:
+   TODO:
+   BUGS:
+*/
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#ifndef __MOTORCONTROL_H_
+#define __MOTORCONTROL_H_
+
+
+/**
+   Tuning parameters with labview program.
+*/
+//#define debug_Labview
+/// \cond
+#ifdef debug_Labview
+    #include "algorithm.nxc"
+    #include "com.nxc"
+    #include "console.nxc"
+    bool start0 = false;
+#endif
+/// \endcond
+
+/// \cond
+struct sMC
+{
+   byte NMOTORS;
+   long M_DELAY;
+   int  M_SCALE;
+   
+   int        amax[];
+   int        vmax[];
+   int        phigh[];
+   byte       mmot[];
+   bool       mon[];
+   bool       mgo[];
+   bool       mup[];
+   long       mtx[];
+   long       mx[];
+   long       mv[];
+   long       ma[];
+   long       mp[];
+   long       me[];
+};
+sMC mc;
+//mc: motor controller
+/// \endcond
+
+/**
+ * \brief Initialize the motorcontroller.
+ *
+ * Call this function befor starting the motor_controller_task!
+ * The control-parameters are set for all motors.
+ * If you want to control only 2 or 1 motor make sure it is connected
+ * in the order: A,B,C. So if you set motors to 1, connect this motor to port A.
+ * Amax represents the maximum Acceleration that will be achieved
+ * when the motor is stationary and the maximum power is applied.
+ * Its mainly for holding the motor in position. High amax-> high overshooting.
+ * Vmax is the maximum Velocity that will be achieved.
+ * High vmax -> smoother breaking, no overshooting.
+ *
+ * \param motors  The number of motors which should be contorled.
+ * \param amax    Control-parameter maximum Acceleration.
+ * \param vmax    Control-parameter maximum Velocity.
+ * \param regTime Minimum regulation time.
+*/
+void initMC(int motors = 3, int amax = 18, int vmax = 100, int regTime = 10)
+{
+   mc.NMOTORS = motors;
+   mc.M_DELAY = regTime;
+   mc.M_SCALE = 12;
+
+   ArrayInit(mc.amax,  amax, mc.NMOTORS);
+   ArrayInit(mc.vmax,  vmax, mc.NMOTORS);
+   ArrayInit(mc.phigh, 87,   mc.NMOTORS);
+   ArrayInit(mc.mmot,  0,    mc.NMOTORS);
+   ArrayInit(mc.mon,   0,    mc.NMOTORS);
+   ArrayInit(mc.mgo,   0,    mc.NMOTORS);
+   ArrayInit(mc.mup,   0,    mc.NMOTORS);
+   ArrayInit(mc.mtx,   0,    mc.NMOTORS);
+   ArrayInit(mc.mx,    0,    mc.NMOTORS);
+   ArrayInit(mc.mv,    0,    mc.NMOTORS);
+   ArrayInit(mc.ma,    0,    mc.NMOTORS);
+   ArrayInit(mc.mp,    0,    mc.NMOTORS);
+   ArrayInit(mc.me,    0,    mc.NMOTORS);
+   
+   for(int m=0; m < mc.NMOTORS; m++)
+      mc.mmot[m] = m;
+}
+
+/**
+  \brief Set control parameter for one motor.
+
+ * Amax represents the maximum Acceleration that will be achieved
+ * when the motor is stationary and the maximum power is applied.
+ * Its mainly for holding the motor in position. High amax-> high overshooting.
+ * Vmax is the maximum Velocity that will be achieved.
+ * High vmax -> smoother breaking, no overshooting.
+ *
+ * \param m       Desired output port: OUT_A, OUT_B, OUT_C
+ * \param amax    Control-parameter maximum Acceleration.
+ * \param vmax    Control-parameter maximum Velocity.
+*/
+void controllerPara(byte m, int amax, int vmax)
+{
+   mc.amax[m] = amax;
+   mc.vmax[m] = vmax;
+}
+
+/**
+ * /private
+ * global motor mutex
+*/
+mutex      motor_mtx;
+
+
+/**
+ * \brief Start the motor controller.
+ *
+ * Motor controller will be started automatically when
+ * calling a move funtion.
+ * Its mainly for saving process time with controllerOff/On.
+ *
+*/
+void controllerOn()
+{
+  Acquire(motor_mtx);
+  for (int m = 0; m < mc.NMOTORS; m++)
+    mc.mon[m] = true;
+  Release(motor_mtx);
+}
+
+/**
+ * \brief Stop the motor controller.
+ *
+ * Motor controller will be stopped.
+ * Its mainly for saving process time with controllerOff/On.
+ * Use this function if you want to use nxc motor functions.
+ * (OnFwd..)
+ * The function waits until the last move is done.
+ *
+*/
+void controllerOff() {
+  bool on;
+  do {
+    on = false;
+    Acquire(motor_mtx);
+    for (int m = 0; m < mc.NMOTORS; m++) {
+      if (mc.mon[m]) {
+        if (mc.mgo[m]) {
+          on = true;
+        } else {
+          byte mot = mc.mmot[m];
+          OffEx(mot, RESET_NONE);
+          mc.mon[m] = false;
+          mc.mv[m]  = 0;
+          mc.ma[m]  = 0;
+          mc.mp[m]  = 0;
+        }
+      }
+    }
+    Release(motor_mtx);
+    Wait(1);
+  } while (on);
+}
+
+/**
+ * \brief Start the motor controller for one motor.
+ *
+ * Motor controller will be started automatically when
+ * calling a move funtion.
+ * Its mainly for saving process time with controllerOff/On.
+ *
+ * \param m  Desired output port: OUT_A, OUT_B, OUT_C.
+*/
+void controllerOnEx(byte m) {
+   Acquire(motor_mtx);
+   mc.mon[m] = true;
+   Release(motor_mtx);
+}
+
+
+/**
+ * \brief Stop the motor controller for one motor.
+ *
+ * Motor controller will be stopped.
+ * Its mainly for saving process time with controllerOff/On.
+ * Use this function if you want to use nxc motor functions.
+ * (OnFwd..)
+ * The function waits until the last move is done.
+ *
+ * \param m  Desired output port: OUT_A, OUT_B, OUT_C.
+*/
+void controllerOffEx(byte m) {
+   bool on;
+   do {
+      on = false;
+      Acquire(motor_mtx);
+      if (mc.mon[m]) {
+         if (mc.mgo[m]) {
+            on = true;
+         } else {
+            byte mot = mc.mmot[m];
+            OffEx(mot, RESET_NONE);
+            mc.mon[m] = false;
+            mc.mv[m]  = 0;
+            mc.ma[m]  = 0;
+            mc.mp[m]  = 0;
+         }
+      }
+      Release(motor_mtx);
+      Wait(1);
+   } while (on);
+}
+
+
+
+/**
+ * \brief Reset the motor.
+ *
+ * Reset the motor by turning until stalling.
+ * Be aware of using this function.
+ *
+ * /param m      Desired output port. Can be a constant or a variable,
+ *               see Output port constants.
+ * /param pwr    Output power, from -50 to +50, use the sign for direction.
+ *
+*/
+void resetMotor(byte m, char pwr)
+{
+   long tacho_now, tacho_prev;
+   byte mot = mc.mmot[m];
+
+   // power limiting (anything above this level would be dangerous)
+   if(pwr > 50)
+      pwr = 50;
+   if(pwr < -50)
+      pwr = -50;
+
+   Acquire(motor_mtx);
+   mc.mon[m] = false;
+   Release(motor_mtx);
+   OnFwdEx(mot, pwr, RESET_NONE);
+   tacho_now = MotorTachoCount(mot);
+   do {
+      Wait(200);
+      tacho_prev = tacho_now;
+      tacho_now = MotorTachoCount(mot);
+   } while(tacho_now != tacho_prev);
+   ResetTachoCount(mot);
+   Wait(200);
+}
+
+
+/**
+   \brief Main control task.
+
+   Start the task after initMC!
+   start Motor_Controller_Task;
+*/
+task Motor_Controller_Task() {
+   long ms = CurrentTick();
+   while (true) {
+      Acquire(motor_mtx);
+      for (int m = 0; m < mc.NMOTORS; m++) {
+         if (mc.mon[m]) {
+            bool rev = false;
+            byte mot = mc.mmot[m];
+            long x = mc.mx[m];
+            long v = mc.mv[m];
+            long a = mc.ma[m];
+            long p = mc.mp[m];
+            long amax = mc.amax[m];
+            long vmax = mc.vmax[m];
+            long phigh = mc.phigh[m];
+            
+            long e = 0;
+            long ax = mc.M_SCALE*MotorTachoCount(mot);
+            long ex = ax-x;
+            if (-mc.M_SCALE < ex && ex < mc.M_SCALE)
+               ax = x;
+            else if (mc.mgo[m])
+               e  = mc.me[m]-ex;
+            long d = mc.mtx[m]-ax;
+            if (mc.mup[m] ? (d < mc.M_SCALE) : (d > -mc.M_SCALE)) {
+               mc.mgo[m] = false;
+               e = 0;
+            }
+            if (d < 0) {
+               d = -d;
+               v = -v;
+               a = -a;
+               p = -p;
+               e = -e;
+               rev = true;
+            }
+            if (d >= mc.M_SCALE) {
+               if (v >= 0) {
+                  long dd = (v+amax/2)+(v*v)/(2*amax);
+                  if (d >= dd) {
+                     p = phigh;
+                     a = (amax*(vmax-v))/vmax;
+                     e = 0;
+                  } else {
+                     a = -(v*v)/(2*d);
+                     if (a < -v)
+                        a = -v;
+                     if (a < -amax)
+                        a = -amax;
+                      p = (phigh*a*(vmax-v))/(amax*vmax);
+                  }
+               } else {
+                  a = -v;
+                  if (a > amax)
+                     a = amax;
+                  p = (phigh*a*(vmax+v))/(amax*vmax);
+               }
+            } else {
+               a = -v;
+               if (a < -amax)
+                  a = -amax;
+               else if (a > amax)
+                  a = amax;
+               p = (phigh*a)/amax;
+            }
+            d = v+a/2;
+            v += a;
+            p += e;
+            if (p > phigh) {
+               p = phigh;
+               e = 0;
+            } else if (p < -phigh) {
+               p = -phigh;
+               e = 0;
+            }
+            if (rev) {
+               d = -d;
+               v = -v;
+               a = -a;
+               p = -p;
+               e = -e;
+            }
+        
+            if (p != mc.mp[m]) {
+               if (p > 0)
+                  OnFwdEx(mot, p, RESET_NONE);
+               else if (p < 0)
+                  OnRevEx(mot, -p, RESET_NONE);
+               else
+                  OffEx(mot, RESET_NONE);
+               mc.mp[m] = p;
+            }
+        
+            #ifdef debug_Labview
+            if(start0 == true) {
+               sendNum( MotorTachoCount(mot), 0 , 0);
+               sendNum(p, 0, 1);
+            }
+            #endif
+        
+            mc.mx[m] = ax+d;
+            mc.mv[m] = v;
+            mc.ma[m] = a;
+            mc.me[m] = e;
+         }
+      }
+      Release(motor_mtx);
+      ms += mc.M_DELAY;
+      long del = ms-CurrentTick();
+      if (del < 1)
+         del = 1;
+      else if (del > mc.M_DELAY)
+         del = mc.M_DELAY;
+      Wait(del);
+   }
+}
+
+
+
+/**
+ * \brief Wait until last move is done.
+ *
+ * \param m   Desired output port: OUT_A, OUT_B, OUT_C
+*/
+void waitMove(int m) {
+   bool go;
+   do {
+      Wait(1);
+      Acquire(motor_mtx);
+      go = mc.mgo[m];
+      Release(motor_mtx);
+   } while (go);
+}
+
+/**
+ * \brief  Checks if move is done.
+ *
+ * \param m   Desired output port: OUT_A, OUT_B, OUT_C
+ * \return    True if move is done.
+*/
+inline bool moveDone(int m)
+{
+   bool go;
+   Wait(1);
+   Acquire(motor_mtx);
+   go = mc.mgo[m];
+   Release(motor_mtx);
+   return go;
+}
+
+
+/**
+ * \brief Move motor to absolute position.
+ *
+ * \param m          Desired output port: OUT_A, OUT_B, OUT_C
+ * \param pos        Position in degrees. 0°-360°
+ * \param pwr        Output power 1%-100%
+ *                   pwr = 0 will use the last used power.
+ * \param wait_move  Wait until move is done. (true = wait)
+ *
+*/
+void moveAbs(int m, long pos, int pwr = 0, bool wait_move = true) {
+   pos = -pos;
+   Acquire(motor_mtx);
+   if(pwr > 0)
+      mc.phigh[m] = pwr;
+   mc.mtx[m] = -mc.M_SCALE*pos;
+   mc.mup[m] = (mc.mtx[m] > mc.mx[m]);
+   mc.mon[m] = true;
+   mc.mgo[m] = true;
+   Release(motor_mtx);
+   if(wait_move)
+      waitMove(m);
+}
+
+
+/**
+ * \brief Move motor relative.
+ *
+ * \param m          Desired output port: OUT_A, OUT_B, OUT_C
+ * \param pos        Position in degrees. 0°-360°
+ * \param pwr        Output power 1%-100%
+ *                   pwr = 0 will use the last used power.
+ * \param wait_move  Wait until move is done. (true = wait)
+ * \param off        Offset.
+*/
+void moveRel(int m, long pos, int pwr = 0, bool wait_move = true, long off = 0) {
+   pos = -pos;
+   Acquire(motor_mtx);
+   if(pwr > 0)
+      mc.phigh[m] = pwr;
+   mc.mtx[m] += -mc.M_SCALE*(pos+off);
+   mc.mup[m] = (mc.mtx[m] > mc.mx[m]);
+   mc.mon[m] = true;
+   mc.mgo[m] = true;
+   Release(motor_mtx);
+   if (off != 0) {
+     waitMove(m);
+     Acquire(motor_mtx);
+     mc.mtx[m] -= -mc.M_SCALE*off;
+     mc.mup[m] = (mc.mtx[m] > mc.mx[m]);
+     mc.mgo[m] = true;
+     Release(motor_mtx);
+   }
+   if(wait_move)
+      waitMove(m);
+}
+
+/**
+ * \brief Run motor forward.
+ *
+ * Do not use nxc api motor function OnFwd!
+ *
+ * \param m          Desired output port: OUT_A, OUT_B, OUT_C
+ * \param pwr        Output power -100% - 100%
+*/
+void moveFwd(int m, char pwr)
+{
+   controllerOffEx(m);
+   OnFwdEx(m, pwr, RESET_NONE);
+}
+
+/**
+ * \brief Run motor reverse dir.
+ *
+ * Do not use nxc api motor function OnRev!
+ *
+ * \param m          Desired output port: OUT_A, OUT_B, OUT_C
+ * \param pwr        Output power -100% - 100%
+*/
+void moveRev(int m, char pwr)
+{
+   controllerOffEx(m);
+   OnRevEx(m, pwr, RESET_NONE);
+}
+
+/**
+ * \brief Stop and break motor.
+ *
+ * Do not use nxc api motor function Off!
+ *
+ * \param m          Desired output port: OUT_A, OUT_B, OUT_C
+*/
+void motorOff(int m)
+{
+   controllerOffEx(m);
+   OffEx(m, RESET_NONE);
+}
+
+/**
+ * \brief Stop (all) motors and shut down motor controller.
+ *
+ * If you only want to turn the controller off you should use controllerOff.
+ * This function will immediately brake the motors and shut down the motor-controller-task.
+ *
+*/
+safecall void motorEmergencyStop()
+{
+   Acquire(motor_mtx);
+   for (int m = 0; m < mc.NMOTORS; m++) {
+      if (mc.mon[m]) {
+         mc.mgo[m] = false;
+         Wait(1);
+         byte mot = mc.mmot[m];
+         OffEx(mot, RESET_NONE);
+         mc.mon[m] = false;
+         mc.mv[m]  = 0;
+         mc.ma[m]  = 0;
+         mc.mp[m]  = 0;
+      }
+    }
+    Release(motor_mtx);
+    stop Motor_Controller_Task;
+    // give motor some time to stabilize
+    Wait(2000);
+}
+
+
+#endif
+
+
+
+

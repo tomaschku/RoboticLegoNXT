@@ -1,0 +1,197 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Circle.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/**
+ * \file Circle.nxc
+ * \brief Circle geometry operations
+ */
+#ifndef _CIRCLE_H_
+#define _CIRCLE_H_
+
+#include "Debug.nxc"
+#include "Vector.nxc"
+
+struct Circle
+{
+    Vector center;
+    long radius;
+};
+
+/**
+ * \brief Determins the 2 points of intersection of two overlapping circles.
+ *
+ * It returns true if the circles intersect uniquely. It returns false if the
+ * circles do not intersect (no solution) or they overlap (no unique solution).
+ * The two points of intersection are returned in retIntersect1 and
+ * retIntersect2. Ref: http://local.wasp.uwa.edu.au/~pbourke/geometry/2circle/
+ */
+bool CircleIntersectCircle(Vector &circleACenter, long circleARadius,
+                           Vector &circleBCenter, long circleBRadius,
+                           Vector &retIntersect1, Vector &retIntersect2)
+{
+    long d, a, h;
+    Vector M;
+
+    /* Distance between the two centers */
+    d = VectorGetDistanceVec(circleACenter, circleBCenter);
+    
+    if ((circleARadius + circleBRadius) < d)
+    {
+        return false; /* No intersection possible */
+    }
+    if (d == 0)
+    {
+        return false; /* Circles overlap. No unique solutions */
+    }
+
+    /* Distance between the center of first circle from the mid point of
+     * intersections.
+     */
+    a = (circleARadius * circleARadius  - circleBRadius * circleBRadius + d * d)/(2 * d);
+    
+    /* Perpendicular height of intersection points from the line joining
+     * the two centers of the circles.
+     */
+    h = circleARadius * circleARadius - a * a;
+    h = Sqrt(h);
+    
+    /* Mid point of intersections: M = Ca + a(Cb - Ca)/d */
+    M = circleBCenter;
+    VectorSubtract(M, circleACenter);
+    VectorScale(M, a);
+    VectorReduce(M, d);
+    VectorAdd(M, circleACenter);
+    
+    retIntersect1.x = M.x + (h * (circleBCenter.y - circleACenter.y))/d;
+    retIntersect1.y = M.y - (h * (circleBCenter.x - circleACenter.x))/d;
+    retIntersect2.x = M.x - (h * (circleBCenter.y - circleACenter.y))/d;
+    retIntersect2.y = M.y + (h * (circleBCenter.x - circleACenter.x))/d;
+    return true;
+}
+
+/**
+ * \brief Determins the 2 points of intersection of a circle and a line given
+ * by two vector points.
+ *
+ * It returns true if the line and circle intersect uniquely. It returns false
+ * if they do not intersect (no solution). The two points of intersection are
+ * returned in retIntersect1 and retIntersect2. If there is only one
+ * intersection point (line just touches the circle, both vectors return
+ * the same point. Ref: http://local.wasp.uwa.edu.au/~pbourke/geometry/sphereline/
+ */
+bool CircleIntersectLine(Vector &circle, long radius,
+                         Vector &pointA, Vector &pointB,
+                         Vector &retIntersect1, Vector &retIntersect2)
+{
+    long a, b, c, u1, u2, t, distance;
+    Vector A, B, T;
+
+    A = pointA;
+    B = pointB;
+
+    /* A long line will overlow the maths below, so trim the line segment */
+    while (VectorGetDistanceVec(A, B) > 500)
+    {
+        VectorSubtract(B, A);
+        VectorReduce(B, 2);
+        VectorAdd(B, A);
+    }
+
+    /* Eqt: a = (x2 - x1)^2 + (y2 - y1)^2 */
+    a = (B.x - A.x) * (B.x - A.x) + (B.y - A.y) * (B.y - A.y);
+    // NumOut(0, LCD_LINE1, a, true);
+    
+    /* Eqt: b = 2[(x2 - x1)(x1 - x3) + (y2 - y1)(y1 - y3)] */
+    b = 2 * ((B.x - A.x) * (A.x - circle.x) + (B.y - A.y) * (A.y - circle.y));
+    // NumOut(0, LCD_LINE2, b, false);
+    
+    /* Eqt: c = x3^2 + y3^2 + x1^2 + y1^2 - 2(x3 * x1 + y3 * y1) - r2 */
+    c = circle.x * circle.x + circle.y * circle.y + A.x * A.x + A.y * A.y -
+        2 * (circle.x * A.x + circle.y * A.y) - radius * radius;
+    // NumOut(0, LCD_LINE3, c, false);
+
+    /* FIXME: t can easily overflow */
+    /* Eqt: u = (-b +/- sqrt(b^2 - 4 * a * c((2 * a) */
+    t = b * b - 4 * a * c;
+    
+    // NumOut(0, LCD_LINE4, t, false); Wait(2000);
+    
+    if (t < 0) /* Line does not intersect */
+    {
+        return false;
+    }
+    else if (t == 0) /* Only one intersection point */
+    {
+        u1 = -b * 1000 / (2 * a);
+        u2 = u1;
+    }
+    else /* Two intersection points. Solve u proper */
+    {
+        long s = Sqrt(t);
+        u1 = (-b + s) * 1000 / (2 * a);
+        u2 = (-b - s) * 1000 / (2 * a);
+    }
+    
+    retIntersect1.x = A.x + u1 * (B.x - A.x) / 1000;
+    retIntersect1.y = A.y + u1 * (B.y - A.y) / 1000;
+    retIntersect2.x = A.x + u2 * (B.x - A.x) / 1000;
+    retIntersect2.y = A.y + u2 * (B.y - A.y) / 1000;
+    return true;
+}
+
+#ifdef ENABLE_TEST
+void TestCircle()
+{
+     Vector circle, p1, p2, intersect1, intersect2;
+     bool success;
+     
+     VectorInit(circle, -50, -50, 0);
+     VectorInit(p1, 0, 0, 0);
+     VectorInit(p2, -100, -100, 0);
+     
+     success = CircleIntersectLine(circle, 50, p1, p2, intersect1, intersect2);
+     TEST((success == true), "Intersection");
+     
+     //VectorPrint(intersect1, "Intersect1", 2000);
+     //VectorPrint(intersect2, "Intersect2", 2000);
+     
+     TEST((intersect1.x == -85), "intersect1.x");
+     TEST((intersect1.y == -85), "intersect1.y");
+     TEST((intersect2.x == -14), "intersect2.x");
+     TEST((intersect2.y == -14), "intersect2.y");
+     
+     VectorInit(circle, 0, 0, 0);
+     VectorInit(p1, 0, 0, 0);
+     VectorInit(p2, 1000, 0, 0);
+
+     success = CircleIntersectLine(circle, 30, p1, p2, intersect1, intersect2);
+     TEST((success == true), "Intersection 2");
+
+     //VectorPrint(intersect1, "Intersect1a", 2000);
+     //VectorPrint(intersect2, "Intersect2a", 2000);
+
+     TEST((intersect1.x == 30), "intersect1.x");
+     TEST((intersect1.y == 0), "intersect1.y");
+     TEST((intersect2.x == -30), "intersect2.x");
+     TEST((intersect2.y == 0), "intersect2.y");
+}
+#endif /* ENABLE_TEST */
+#endif /* __CIRCLE_H_ */
+

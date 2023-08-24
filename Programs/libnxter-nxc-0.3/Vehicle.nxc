@@ -1,0 +1,495 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Vehicle.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/**
+ * \file Vehicle.nxc
+ * \brief A simple 2 wheels drive vehicle implementation that can travel a
+ * set of navigation points.
+ *
+ * It contains a pair of differential motors (independently controlled), uses
+ * odometry to position itself in 2D plane and a set of defined navigation
+ * points. The navigation points can be dynamically changed during run time.
+ * All vectors operated in Vehicle are in centimeters (cm).
+ */
+
+#ifndef _VEHICLE_H_
+#define _VEHICLE_H_
+
+#include "Debug.nxc"
+#include "Angle.nxc"
+#include "Vector.nxc"
+#include "Circle.nxc"
+#include "Odometer2.nxc"
+#include "Motor.nxc"
+
+#define VEHICLE_MAX_POWER_DEFAULT 60
+#define VEHICLE_MIN_POWER_DEFAULT 25
+#define VEHICLE_ACCEL_DEFAULT 3  /* Acceleration */
+#define VEHICLE_BRAKE_DEFAULT 10 /* Deceleration */
+#define VEHICLE_MAX_STEERING_FACTOR_DEFAULT 60
+#define VEHICLE_STABILITY_FACTOR_DEFAULT 210  /* Max 3 steer factor at 90 power */
+#define VEHICLE_LOOKAHEAD_DISTANCE_DEFAULT 20 /* Look ahead distance 20 cm */
+
+/**
+ * \brief Vehicle class representing a 2 wheels drive vehicle.
+ */
+struct Vehicle
+{
+    int maxPower;             /**< Maximum power the vehicle is allowed to take >*/
+    int minPower;             /**< Minimum power during steering >*/
+    int accelPower;           /**< Acceleration per step >*/
+    int brakePower;           /**< Braking per step >*/
+    int currentPower;         /**< Currently set power to the motors >*/
+    int maxSteerFactor;       /**< Maximum steering factor Vehicle is allowed >*/
+    int currentSteerFactor;   /**< Current steering factor set to the motors >*/
+    int stabilityFactor;      /**< Inverse relationship of power and steering >*/
+    int motorLeft;            /**< The left motor of the wheel >*/
+    int motorRight;           /**< The right motor of the wheel >*/
+    Odometer2 odometer;       /**< Odometer used to position in 2D plane >*/
+    Vector navPointsQueue[];  /**< Navigation points queue >*/
+    int navPoint;             /**< Currently executing navigation point >*/
+    int navPointLast;         /**< Last navigation point in queue >*/
+    int maxNavPoints;         /**< Maximum amount of navigation points in queue >*/
+    int lookaheadDistance;    /**< Look ahead distance for path following >*/
+    Vector lastMoveVector;    /**< Last vector moved >*/
+    bool pause;               /**< Pause state of vehicle >*/
+};
+
+/**
+ * \brief Initializes Vehicle with the given odometer and maximum amount of
+ * navigation points internal queue should hold.
+ */
+void VehicleInit(Vehicle &vehicle, Odometer2 &odometer, int maxNavPoints)
+{
+    vehicle.maxPower = VEHICLE_MAX_POWER_DEFAULT;
+    vehicle.minPower = VEHICLE_MIN_POWER_DEFAULT;
+    vehicle.accelPower = VEHICLE_ACCEL_DEFAULT;
+    vehicle.brakePower = VEHICLE_BRAKE_DEFAULT;
+    vehicle.currentPower = 0;
+    vehicle.maxSteerFactor = VEHICLE_MAX_STEERING_FACTOR_DEFAULT;
+    vehicle.currentSteerFactor = 0;
+    vehicle.stabilityFactor = VEHICLE_STABILITY_FACTOR_DEFAULT;
+    vehicle.motorLeft = odometer.leftWheelMotor;
+    vehicle.motorRight = odometer.rightWheelMotor;
+
+    ArrayInit(vehicle.navPointsQueue, 0, maxNavPoints);
+    vehicle.navPoint = 0;
+    vehicle.navPointLast = 0;
+    vehicle.maxNavPoints = maxNavPoints;
+    vehicle.pause = false;
+    vehicle.odometer = odometer;
+    VectorInit(vehicle.lastMoveVector, 0, 0, 0);
+    vehicle.lookaheadDistance = VEHICLE_LOOKAHEAD_DISTANCE_DEFAULT;
+}
+
+/**
+ * \brief Sets the dynamics of the vehicle.
+ *
+ * minPower is the minimum power that the vehicle should maintain as long as
+ * it has navigation paths to follow. maxPower is the maximum power the
+ * vehicle is allowed to take. powerAtSteer and steerAtPower are one power and
+ * steering factor (respectively) combination found in inverse relationship
+ * of power and steering factor funtion. This is used to determine stability
+ * factor of the vehicle. maxSteerFactor is the maximum steering factor
+ * allowed to take by the vehicle.
+ */
+void VehicleSetDynamics(Vehicle &vehicle, int minPower, int maxPower,
+                        int powerAtSteer, int steerAtPower, int maxSteerFactor)
+{
+    vehicle.minPower = minPower;
+    vehicle.maxPower = maxPower;
+    vehicle.stabilityFactor = (powerAtSteer - minPower) * steerAtPower;
+    vehicle.maxSteerFactor = maxSteerFactor;
+}
+
+/**
+ * \brief Sets the acceleration and braking rate of the vehicle
+ *
+ * When vehicle needs acceleration or braking, accelerationPerStep or
+ * brakingPerStep will be used to increase or reduce the power per step.
+ */
+void VehicleSetAcceleration(Vehicle &vehicle, int accelerationPerStep,
+                            int brakingPerStep)
+{
+     vehicle.accelPower = accelerationPerStep;
+     vehicle.brakePower = brakingPerStep;
+}
+
+/**
+ * \brief Sets the look ahead distance of the vehicle.
+ *
+ * The vehicle implements 'carrot following' algorithm for path following.
+ * Look ahead distance is the distance of the carrot from vehicle to determine
+ * look ahead point (carrot).
+ */
+void VehicleSetLookaheadDistance(Vehicle &vehicle, int lookaheadDistance)
+{
+    vehicle.lookaheadDistance = lookaheadDistance;
+}
+
+/**
+ * \brief Pauses the vehicle. The pause is in effect immediately.
+ */
+void VehiclePause(Vehicle &vehicle)
+{
+    MotorSetPowerSync(vehicle.motorLeft, vehicle.motorRight, 0);
+    vehicle.currentPower = 0;
+    vehicle.pause = true;
+}
+
+/**
+ * \brief Continues the vehicle. The continue is in effect immediately and
+ * will start accelerating from next step on wards.
+ */
+void VehicleContinue(Vehicle &vehicle)
+{
+    MotorStartSync(vehicle.motorLeft, vehicle.motorRight, 0);
+    vehicle.pause = false;
+}
+
+/**
+ * \brief Adds a navigation point to the internal queue. The navigation point
+ * is appended to the queue so that it is executed after existing navigation
+ * points. Navigation points vectors in cm.
+ */
+void VehicleAddNavPoint(Vehicle &vehicle, Vector &navPoint)
+{
+    if (vehicle.navPointLast >= vehicle.maxNavPoints)
+        vehicle.navPointLast = 0;
+    vehicle.navPointsQueue[vehicle.navPointLast] = navPoint;
+    vehicle.navPointLast++;
+
+    /* Start drive */
+    MotorStartSync(vehicle.motorLeft, vehicle.motorRight, 0);
+}
+
+/**
+ * \brief Adds a set of navigation points to the internal queue. The points
+ * are appended to the queue so that they are executed after existing navigation
+ * points. Navigation points vectors in cm.
+ */
+void VehicleAddNavPoints(Vehicle &vehicle, Vector &navPoints[])
+{
+    int arryLen = ArrayLen(navPoints);
+    for (int i = 0; i < arryLen; i++)
+    {
+        if (vehicle.navPointLast >= vehicle.maxNavPoints)
+            vehicle.navPointLast = 0;
+
+        Vector v = navPoints[i];
+        vehicle.navPointsQueue[vehicle.navPointLast] = v;
+        vehicle.navPointLast++;
+    }
+    /* Start drive */
+    if (arryLen > 0)
+        MotorStartSync(vehicle.motorLeft, vehicle.motorRight, 0);
+}
+
+/**
+ * \brief Steers the vehicle by the give approachAngle. Positive angle
+ * would turn the vehicle anti-clockwise and negative angle would turn it
+ * clockwise.
+ *
+ * This is a direct in-place turn and motors will be stopped after the turn.
+ * It uses PID control to make the turn.
+ */
+long VehicleSteerToAngle(Vehicle &vehicle, int approachAngle)
+{
+     long wheelRotation = (approachAngle * vehicle.odometer.axialLength * 100) /
+                 (vehicle.odometer.wheelDiameter * vehicle.odometer.gearRatio);
+     MotorRotateAngleDiff(vehicle.motorLeft, vehicle.motorRight,
+                          vehicle.maxPower, -wheelRotation, 300, 0, 0);
+
+     /* Update odometer after the steer */
+     Odometer2Step(vehicle.odometer);
+}
+
+/**
+ * \brief Updates both current power and current steering of the vehicle
+ * based on the requested steering factor.
+ *
+ * Vehicle may not get the requested steering if the current power is too
+ * high for it. It will instead try to slow down to the power level where
+ * this steering is possible. On the other hand if requested steering is
+ * low for the current power, it will try to accelarate the vehicle. The
+ * stable and safe steering factor at a given power is computate as an
+ * inverse function -- that is, higher the power, lower the allowable
+ * steering factor. The constant in this function is the 'stability factor'.
+ * The vehicle always try to keep the set minimum power to
+ * motors as long as it is traveling, and maximum power as long as it is
+ * going straight. Between the two extremes, the vehicle will accelerate
+ * or decelarate depending on the steering needs.
+ */
+void VehicleUpdatePowerAndSteer(Vehicle &vehicle, int requestedSteerFactor)
+{
+    long steerPower, allowedSteerFactor;
+    long absSteerFactor = Abs(requestedSteerFactor);
+    
+     /* Avoid divide by 0. If steer factor is 0 (i.e. go straight) assign
+      * maximum power for the allowable steering power. Otherwise, calculate
+      * it from the stability factor.
+      */
+    if (absSteerFactor > 0)
+        steerPower = vehicle.minPower + vehicle.stabilityFactor/absSteerFactor;
+    else
+        steerPower = vehicle.maxPower;
+    
+    /* Update power based on requested steerFactor. If allowable power is
+     * is greater than current power, the steering can easily happen and
+     * also the motors can increase their powers -- accelerate slowly.
+     */
+    if (steerPower > vehicle.currentPower)
+    {
+        vehicle.currentPower += vehicle.accelPower;
+        if (vehicle.currentPower > vehicle.maxPower)
+            vehicle.currentPower = vehicle.maxPower;
+
+    }
+    /* Otherwise, if allowable power is less than current power, deccelerate
+     * to reach the allowed power for making necessary steering.
+     */
+    else if (steerPower < vehicle.currentPower)
+    {
+        vehicle.currentPower -= vehicle.brakePower;
+        if (vehicle.currentPower < 0)
+            vehicle.currentPower = 0;
+    }
+    
+    /* Determine the limit of steering that can be safely done on current power */
+    long powerDiff = (vehicle.currentPower - vehicle.minPower);
+    if (powerDiff <= 0)
+       allowedSteerFactor = vehicle.maxSteerFactor;
+    else
+       allowedSteerFactor = vehicle.stabilityFactor/powerDiff;
+    if (allowedSteerFactor > vehicle.maxSteerFactor)
+       allowedSteerFactor = vehicle.maxSteerFactor;
+
+    /* Pick whichever is minimum, the request steering or currently safe
+     * steering calculated above based on current power.
+     */
+    if (absSteerFactor > allowedSteerFactor)
+    {
+        /* Requested steering factor is above the limit possible with current
+         * power, so use the limit instead while the vehicle decelarates.
+         */
+        vehicle.currentSteerFactor = allowedSteerFactor;
+
+        /* Correct current steering factor sign */
+        if (requestedSteerFactor <= 0)
+            vehicle.currentSteerFactor = -vehicle.currentSteerFactor;
+    }
+    else
+    {
+        /* Requested steering factor is within the limit of current power
+         * so use it directly.
+         */
+        vehicle.currentSteerFactor = requestedSteerFactor;
+    }
+
+    /* Apply the powers to wheels */
+    MotorSetTurnRatioPower(vehicle.motorLeft, vehicle.motorRight,
+                           vehicle.currentSteerFactor,
+                           vehicle.currentPower);
+
+}
+
+/**
+ * \brief Determines the perpendicular drop of point p on the line given
+ * by points a and b.
+ */
+void LineProjectPoint(Vector a, Vector b, Vector p, Vector &ret)
+{
+    long dsqr =  VectorGetDistanceVec(a, b);
+    dsqr *= dsqr;
+    long u = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y))/dsqr;
+    ret.x = a.x + u * (b.x - a.x);
+    ret.y = a.y + u * (b.y - a.y);
+    ret.theta = 0;
+}
+
+/**
+ * \brief Determines the current lookahead point of the vehicle.
+ *
+ * Look ahead point is a point 'look ahead' distance away from the vehicle
+ * that intersects with the next path that vehicle is supposed to follow.
+ * 'Next path' is the path denoted by the line from last visited navigation
+ * point to the currently targeted navigation point. If there is no
+ * intersection (that is, vehicle is off the path too much) it uses the
+ * closest point (within the circle) to the path.
+ */
+bool VehicleGetLookahead(Vehicle &vehicle, Vector &lookahead)
+{
+    Vector currentPoint, moveVector;
+    Vector intersect1, intersect2;
+    bool result;
+
+    if (vehicle.navPoint == vehicle.navPointLast)
+    {
+        /* Vehicle has no currently targeted navigation point */
+        return false;
+    }
+    
+    Odometer2GetCumulativePosition(vehicle.odometer, currentPoint);
+    VectorReduce(currentPoint, 10); /* Reduce to cm */
+    
+    moveVector = vehicle.navPointsQueue[vehicle.navPoint];
+    result = CircleIntersectLine(currentPoint, vehicle.lookaheadDistance,
+                                 vehicle.lastMoveVector, moveVector,
+                                 intersect1, intersect2);
+    if (result == true)
+    {
+        /* Pick the intersection point closer to move vector */
+        long d1 = VectorGetDistanceVec(moveVector, intersect1);
+        long d2 = VectorGetDistanceVec(moveVector, intersect2);
+        if (d1 < d2) lookahead = intersect1;
+        else lookahead = intersect2;
+    }
+    else
+    {
+        /* If we don't get a lookahead circle intersection, find a projected
+         * target on the path to follow
+         */
+        LineProjectPoint(vehicle.lastMoveVector, moveVector,
+                         currentPoint, intersect1);
+        intersect2 = intersect1;
+    }
+    return true;
+}
+
+/**
+ * \brief Vehicle execution step funtion.
+ *
+ * Call this at regular interval
+ * (not necessarily with the same interval period). 30 to 150 ms is a good
+ * choice. This will execute vehicle commands required to move it through the
+ * series of navigation points. Each step is a minuscle operation to correct
+ * the drive operations.
+ */
+int VehicleStep(Vehicle &vehicle)
+{
+    long PAngle = 50;
+    Vector currentPoint, moveVector, lookahead;
+
+    if(vehicle.navPoint == vehicle.navPointLast)
+    {
+        MotorStopSync(vehicle.motorLeft, vehicle.motorRight);
+        /* Nowhere to move */
+        return false;
+    }
+
+    /* Check pause */
+    if (vehicle.pause == true)
+    {
+        /* Step must be continued */
+        return true;
+    }
+
+    Odometer2Step(vehicle.odometer);
+    Odometer2GetCumulativePosition(vehicle.odometer, currentPoint);
+    VectorReduce(currentPoint, 10); /* Convert to cm */
+    
+    moveVector = vehicle.navPointsQueue[vehicle.navPoint];
+
+    /* Determine distance to destination */
+    long distanceToTravel = VectorGetDistanceVec(currentPoint, moveVector);
+
+    /* If current move vector is reached, move on to next vector */
+    if (distanceToTravel < vehicle.lookaheadDistance)
+    {
+        vehicle.navPoint++;
+        vehicle.lastMoveVector = moveVector;
+
+        /* Step must be continued */
+        return true;
+    }
+
+    /* Look ahead and find the direction of heading */
+    VehicleGetLookahead(vehicle, lookahead);
+
+    /* Determine move angle (0 .. 360), which is the (absolute) target
+     * angle to which vehicle is to be steered.
+     */
+    long moveAngle = VectorGetAngleVec(currentPoint, lookahead);
+
+    /* Determine approach angle (0 .. 360) from vehicle's orientation */
+    long approachAngle = AngleAbsSub(moveAngle, currentPoint.theta);
+
+    /* Determine approachAngle relative -180 .. 180 */
+    approachAngle = AngleAbsToRel(approachAngle);
+
+    long steerFactor = (approachAngle * PAngle)/100;
+    if (steerFactor > vehicle.maxSteerFactor)
+        steerFactor = vehicle.maxSteerFactor;
+    else if (steerFactor < -vehicle.maxSteerFactor)
+        steerFactor = -vehicle.maxSteerFactor;
+
+    VehicleUpdatePowerAndSteer(vehicle, steerFactor);
+
+    /* Step must be continued */
+    return true;
+}
+
+/* Tests */
+#ifdef ENABLE_TEST
+#include "RobotPrima.nxc"
+
+void TestVehicle()
+{
+    Vehicle theVehicle;
+    Odometer2 wheelBase;
+    Vector point;
+
+    /* Initialize vehicle */
+    Odometer2Init(wheelBase, OUT_B, OUT_C,
+                  PRIMA_WHEEL_AXIAL_LENGTH,
+                  PRIMA_WHEEL_DIAMETER,
+                  PRIMA_WHEEL_GEAR_RATIO,
+                  0,     /* Initial left tacho count */
+                  0,     /* Initial right tacho count */
+                  true,  /* enable dx calculation */
+                  true); /* enable delta calculation */
+    VehicleInit(theVehicle, wheelBase, PRIMA_MAX_NAV_POINTS);
+
+    /* Set navigation path */
+
+    VectorInit(point, 100, 0, 0);
+    VehicleAddNavPoint(theVehicle, point);
+    VectorInit(point, 100, 50, 0);
+    VehicleAddNavPoint(theVehicle, point);
+    VectorInit(point, 0, 50, 0);
+    VehicleAddNavPoint(theVehicle, point);
+    VectorInit(point, 0, 0, 0);
+    VehicleAddNavPoint(theVehicle, point);
+    VectorInit(point, 30, 50, 0);
+    VehicleAddNavPoint(theVehicle, point);
+    VectorInit(point, 70, -50, 0);
+    VehicleAddNavPoint(theVehicle, point);
+    VectorInit(point, 100, 0, 0);
+    VehicleAddNavPoint(theVehicle, point);
+    VectorInit(point, 50, -20, 0);
+    VehicleAddNavPoint(theVehicle, point);
+    VectorInit(point, 0, 0, 0);
+    VehicleAddNavPoint(theVehicle, point);
+
+    while(VehicleStep(theVehicle)) Wait(50);
+}
+
+#endif /* ENABLE_TEST */
+#endif /* _VEHICLE_H_ */
+

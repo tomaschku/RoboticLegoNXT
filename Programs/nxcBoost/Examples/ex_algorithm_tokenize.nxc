@@ -1,0 +1,32 @@
+#include "algorithm.nxc"
+#include "console.nxc"
+
+// bug wiht console!
+
+// Ex1
+// split a string into tokens
+task main()
+{
+   initConsole();
+   setConsoleTime(555);
+
+   string test = "-zero-one-two-three-four-five-six-seven-eight-nine-ten-";
+   // tokens must be a uninitialized array!
+   string tokens[];
+   int tokens_count;
+
+   cout("Tokenize String");
+   tokens_count =  tokenize(test, "-", tokens);
+
+   coutF("Found %.0f tokens", tokens_count);
+
+   // show tokens
+   for(int i=0; i < tokens_count; ++i) {
+      coutF("%.0f: ", i, 0, false);
+      string tok = tokens[i];
+      cout(tok);
+   }
+
+   until( kbhit() );
+}
+

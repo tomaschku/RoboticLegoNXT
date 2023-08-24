@@ -1,0 +1,74 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Sampler.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/**
+ * \file Sampler.nxc
+ * \brief A sampler to sample a stream of inputs at periodic interval.
+ */
+
+#ifndef __SAMPLER_H_
+#define __SAMPLER_H_
+
+/**
+ * \brief The class to hold sampler context
+ */
+struct SamplerContext
+{
+    int lastPosition;
+    int samplingPeriod;
+    int lastOutput;
+    int lastInput;
+    bool hasMore;
+};
+
+/** \brief Initializes the sampler with given sampling period and initial
+ * position.
+ */
+void
+SamplerInit (SamplerContext &context, int currentPosition, int samplingPeriod)
+{
+    context.lastPosition = currentPosition;
+    context.samplingPeriod = samplingPeriod;
+    context.lastOutput = -1;
+    context.lastInput = -1;
+    context.hasMore = false;
+}
+
+/** \brief Returns sampleInput at the sampling periods and -1 for all others
+ */
+int
+SamplerGet (SamplerContext &context, int currentPosition, int sampleInput)
+{
+    /* If current sampling period hasn't arrived, return no sample */
+    if (currentPosition < context.lastPosition + context.samplingPeriod)
+        return -1;
+
+    context.lastPosition += context.samplingPeriod;
+    context.lastOutput = sampleInput;
+    context.lastInput = sampleInput;
+
+    if (currentPosition < context.lastPosition + context.samplingPeriod)
+        context.hasMore = true;
+    else
+        context.hasMore = false;
+    return sampleInput;
+}
+
+#endif
+

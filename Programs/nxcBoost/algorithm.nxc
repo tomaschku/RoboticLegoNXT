@@ -1,0 +1,688 @@
+// for doxygen (modules)
+/**
+ * \defgroup utilities           Utilities
+ * \defgroup debug               Debug
+ * \defgroup motorcontroller     Motorcontroller
+*/
+
+/*//////////////////////////////////////////////////////////////////////////*\
+//                               MAINPAGE INFO                              //
+/*//////////////////////////////////////////////////////////////////////////*\
+/**
+*  @mainpage nxcBoost
+*
+ *
+ *  The nxcBoost Library is free software: you can redistribute it and/or modify                <br>
+ *  it under the terms of the GNU General Public License as published by the Free Software      <br>
+ *  Foundation, either version 3 of the License, or (at your option) any later version.         <br>
+ *                                                                                              <br>
+ *  The nxcBoost Library is distributed in the hope that it will be useful,                     <br>
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS   <br>
+ *  FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.              <br>
+ *                                                                                              <br>
+ *  See <http://www.gnu.org/licenses/>.                                                         <br>
+*
+*   Author Website:
+*   <http://www.roboticsaumair.jimdo.com/>
+*
+*  @author Martin Aumair
+*  @date   30.July.2013
+*/
+
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/**
+* @file algorithm.nxc
+* \ingroup utilities
+*
+* @brief Collection of useful functions for arrays and strings
+*
+**/
+
+/*
+   CHANGELOG:
+   TODO:
+   BUGS:
+*/
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+#ifndef __ALGORITHM_H_
+#define __ALGORITHM_H_
+
+/**
+ * \brief Resize arrays
+ *
+ * This function resize the input array dynamically.
+ * You can make it smaller or bigger.
+ * Note that making arrays bigger takes a lot of processing
+ * time.
+ *
+ * \param array[]  The array to resize.
+ * \param size     The size of the new array.
+*/
+inline void arrayResize(float &array[], unsigned int size)
+{
+   int len = ArrayLen(array);
+   
+   if(size == len)
+      return;
+   
+   if(size > len) {
+      float temp[];
+      ArrayInit(temp, 0, size);
+
+      for(int i=0; (i<len && i<size); ++i) {
+         temp[i] = array[i];
+      }
+      ArrayInit(array, 0, size);
+      ArrayBuild(array, temp);
+      ArrayInit(temp, 0, 0);  // zur Sicherheit löschen wer weiß?
+   }
+   else {
+      ArraySubset(array, array, 0, size);
+   }
+}
+
+
+/**
+ * \brief Resize arrays of strings
+ *
+ * This function resize the input array dynamically.
+ * You can make it smaller or bigger.
+ * Note that making arrays bigger takes a lot of processing
+ * time.
+ *
+ * \param array[]  The array to resize.
+ * \param size     The size of the new array.
+*/
+inline void arrayResizeStr(string &array[], unsigned int size)
+{
+   int len = ArrayLen(array);
+   
+   if(size == len)
+      return;
+
+   if(size > len) {
+      string temp[];
+      ArrayInit(temp, "", size);
+
+      for(int i=0; (i<len && i<size); ++i) {
+         temp[i] = array[i];
+      }
+      ArrayInit(array, "", size);
+      ArrayBuild(array, temp);
+      ArrayInit(temp, "", 0);  // zur Sicherheit löschen wer weiß?
+   }
+   else {
+      ArraySubset(array, array, 0, size);
+   }
+}
+
+
+
+
+/**
+ * \brief Get position of maximum
+ *
+ * This function calculates the position of the maximum
+ * of all or a subset of the elements in the numeric array.
+ *
+ * \param array[]   The source numeric array
+ * \param idx       The index of the start of the array subset
+ *                  to process. Pass NA to start with
+ *                  the first element.
+ * \param len       The number of elements to include
+ *                  in the calculation. Pass NA to include
+ *                  the rest of the elements in the src array.
+ * \return          Position of the maximum.
+*/
+unsigned int arrayMaxPos(const float array[],
+                         unsigned int idx = 0,
+                         unsigned int len = NA)
+{
+   if(len == NA)
+      len =  ArrayLen(array);
+   
+   float max = array[idx];
+   unsigned int pos = idx;
+
+   for(int i=idx; i < len; ++i) {
+      if( array[i] > max ) {
+         max = array[i];
+         pos = i;
+      }
+   }
+   return pos;
+}
+
+
+
+/**
+ * \brief Get positions of maximums
+ *
+ * This function calculates the position of multiple maximums
+ * of all or a subset of the elements in the numeric array.
+ * The positions of the max are copied to the specified destination array.
+ *
+ * \param array[]        The source numeric array.
+ * \param max_pos[]      Destination array to copy max positions.
+ *                       Only uninitialized arrays are allowed!
+ * \param idx            The index of the start of the array subset
+ *                       to process. Pass NA to start with
+ *                       the first element.
+ * \param len            The number of elements to include
+ *                       in the calculation. Pass NA to include
+ *                       the rest of the elements in the src array.
+ * \return               The number of maximus.
+*/
+unsigned int arrayMaxPosEx(const float  &array[],
+                           unsigned int &max_pos[],
+                           unsigned int idx = 0,
+                           unsigned int len = NA)
+{
+   if(len == NA)
+      len =  ArrayLen(array);
+
+   // make this value bigger if you have problems with process time
+   // make this value smaler if you run out of memory (File Error -1)
+   unsigned int len_threshold = 20;
+   ArrayInit(max_pos, 0, len_threshold);
+
+   float max = array[idx];
+   unsigned int count_max = 0;
+   max_pos[0] = idx;
+
+   // find the maximum
+   for(int i=idx; i < len; ++i) {
+      if( array[i] > max ) {
+         max = array[i];
+         max_pos[0] = i;
+      }
+   }
+   // find all max
+   for(int j=idx; j < len; ++j) {
+      if( array[j] == max ) {
+      
+         if(count_max >= (len_threshold - 1) ){
+            len_threshold += 20;
+            arrayResize(max_pos, len_threshold);
+         }
+         max_pos[count_max] = j;
+         ++count_max;
+      }
+   }
+
+   arrayResize(max_pos, count_max);
+   return count_max;
+}
+
+
+
+/**
+ * \brief Get position of minimum
+ *
+ * This function calculates the position of the minimum
+ * of all or a subset of the elements in the numeric array.
+ *
+ * \param array[]   The source numeric array
+ * \param idx       The index of the start of the array subset
+ *                  to process. Pass NA to start with
+ *                  the first element.
+ * \param len       The number of elements to include
+ *                  in the calculation. Pass NA to include
+ *                  the rest of the elements in the src array.
+ * \return          Position of the minimum.
+*/
+unsigned int arrayMinPos(const float array[],
+                         unsigned int idx = 0,
+                         unsigned int len = NA)
+{
+  if(len == NA)
+      len =  ArrayLen(array);
+  float min = array[idx];
+  unsigned int pos = idx;
+   
+  for(int i=idx; i < len; ++i) {
+      if( array[i] < min ) {
+         min = array[i];
+         pos = i;
+      }
+   }
+   return pos;
+}
+
+
+/**
+ * \brief Get positions of minimums
+ *
+ * This function calculates the position of multiple minimums
+ * of all or a subset of the elements in the numeric array.
+ * The positions of the min are copied to the specified destination array.
+ *
+ * \param array[]        The source numeric array.
+ * \param min_pos[]      Destination array to copy min positions.
+ *                       Only uninitialized arrays are allowed!
+ * \param idx            The index of the start of the array subset
+ *                       to process. Pass NA to start with
+ *                       the first element.
+ * \param len            The number of elements to include
+ *                       in the calculation. Pass NA to include
+ *                       the rest of the elements in the src array.
+ * \return               The number of minimums.
+*/
+unsigned int arrayMinPosEx(const float  &array[],
+                           unsigned int &min_pos[],
+                           unsigned int idx = 0,
+                           unsigned int len = NA)
+{
+   if(len == NA)
+      len =  ArrayLen(array);
+
+   // make this value bigger if you have problems with process time
+   // make this value smaler if you run out of memory (File Error -1)
+   unsigned int len_threshold = 20;
+   ArrayInit(min_pos, 0, len_threshold);
+
+   float min = array[idx];
+   unsigned int count_min = 0;
+   min_pos[0] = idx;
+
+   for(int i=idx; i < len; ++i) {
+      if( array[i] > min ) {
+         min = array[i];
+         min_pos[0] = i;
+      }
+   }
+   for(int j=idx; j < len; ++j) {
+      if( array[j] == min ) {
+         if(count_min >= (len_threshold - 1) ) {
+            len_threshold += 20;
+            arrayResize(min_pos, len_threshold);
+         }
+      
+         min_pos[count_min] = j;
+         ++count_min;
+      }
+   }
+
+   arrayResize(min_pos, count_min);
+   return count_min;
+}
+
+
+/**
+ * \brief Get position of the number which is closest to your number.
+ *
+ * Searches through all or a subset of the elements in the numeric array.
+ *
+ * \param src[]          The source numeric array.
+ * \param x              The number, used for searching.
+ * \param distance       The distance to the closest number.
+ * \param idx            The index of the start of the array subset
+ *                       to process. Pass NA to start with
+ *                       the first element.
+ * \param len            The number of elements to include
+ *                       in the calculation. Pass NA to include
+ *                       the rest of the elements in the src array.
+ * \return               The index of the closest number.
+*/
+int nearestNeighbor(float &src[],
+                    int x,
+                    int &distance,
+                    unsigned int idx = 0,
+                    unsigned int len = NA)
+{
+   if(len == NA)
+      len = ArrayLen(src);
+
+   int neighbor = idx;
+   distance = src[idx] - x;
+   int act_distance = distance;
+
+   for(int i=idx+1; i<len; i++) {
+      act_distance = src[i] - x;
+      if( abs(act_distance) < abs(distance) ) {
+         distance = act_distance;
+         neighbor = i;
+      }
+   }
+   return neighbor;
+}
+
+
+/**
+ * \brief Get position of the number which is farthest from your number.
+ *
+ * Searches through all or a subset of the elements in the numeric array.
+ *
+ * \param src[]          The source numeric array.
+ * \param x              The number, used for searching.
+ * \param distance       The distance to the farthest number.
+ * \param idx            The index of the start of the array subset
+ *                       to process. Pass NA to start with
+ *                       the first element.
+ * \param len            The number of elements to include
+ *                       in the calculation. Pass NA to include
+ *                       the rest of the elements in the src array.
+ * \return               The index of the farthest number.
+*/
+int farthestNeighbor(float &src[],
+                     int x,
+                     int &distance,
+                     unsigned int idx = 0,
+                     unsigned int len = NA)
+{
+   if(len == NA)
+      len = ArrayLen(src);
+
+   int neighbor = idx;
+   distance = src[idx] - x;
+   int act_distance = distance;
+
+   for(int i=idx+1; i<len; i++) {
+      act_distance = src[i] - x;
+      if( abs(act_distance) > abs(distance) ) {
+         distance = act_distance;
+         neighbor = i;
+      }
+   }
+   return neighbor;
+}
+
+
+
+/**
+ * \brief Split string into tokens separated by an delimiter.
+ *
+ * A sequence of calls to this function split str into tokens,
+ * which are sequences of contiguous characters
+ * separated by a string of a delimiter.
+ *
+ * On a first call, the function expects the token-string as argument for str,
+ * whose first character is used as the starting location to scan for tokens.
+ * In subsequent calls, the function expects a "NULL" string and uses
+ * the position right after the end of last token as
+ * the new starting location for scanning.
+ *
+ * The function returns in every single call one token.
+ * If there are no more tokens left, the function returns a "NULL" string.
+ * If str or del contains no character, the function returns also "NULL".
+ *
+ * \param str        The string containing the tokens or
+ *                   "NULL" continue with current string
+ * \param del        Delimiter between tokens-
+ * \return string    Current token.
+*/
+string strtok(const string str, const string del)
+{
+   int start_pos, end_pos;
+   string temp_token = "";
+   string token = "";
+
+   static string save_str;
+   const string no_token = "NULL";
+
+   if(str == "" || del == "")
+      return "NULL";
+
+   if(str != "NULL")
+      save_str = str;
+
+   // get the position of the first delimiter
+   start_pos  = Pos(del, save_str);
+   
+   temp_token = SubStr(save_str, start_pos + 1,
+                       StrLen(save_str) - start_pos);
+                       
+   end_pos    = Pos(del, temp_token);
+   token      = SubStr(temp_token, 0, end_pos - start_pos);
+
+   // remove the current token
+   save_str   = SubStr(save_str, end_pos + 1, StrLen(temp_token) - end_pos + 1 );
+
+   if(start_pos == -1 || end_pos == -1) {
+      save_str = "";
+      return no_token;
+   }
+   else
+      return token;
+}
+
+/**
+ * \brief Split string into tokens separated by delimiters.
+ *
+ * This is almost the same as strtok.
+ * You can use several delimiters passed with an array of strings.
+ * For example: string del[] = {"-", " ", "/"};
+ *
+ * \param str        The string containing the tokens or
+ *                   "NULL" continue with current string
+ * \param  del[]     Delimiters between tokens.
+ * \return string    Current token.
+*/
+string strtokEx(const string str, string &del[])
+{
+   unsigned int delNum = ArrayLen(del);
+   int start_pos[], end_pos[];
+   int min_start_pos, min_end_pos;
+   string temp_token = "";
+   string token = "";
+
+   ArrayInit(start_pos, 0, delNum);
+   ArrayInit(end_pos, 0, delNum);
+
+   static string save_str;
+   const string no_token = "NULL";
+
+   if(str == "")
+      return "NULL";
+
+   if(str != "NULL")
+      save_str = str;
+
+   // get the position of the first delimiter
+
+   int failCounterStart = 0;
+   for(int i=0; i<delNum; ++i) {
+      start_pos[i]  = Pos(del[i], save_str);
+      if(start_pos[i] == -1) {
+         failCounterStart++;
+         start_pos[i] = INT_MAX;
+      }
+   }
+
+   min_start_pos = arrayMinPos(start_pos);
+
+   temp_token = SubStr(save_str, start_pos[min_start_pos] + 1,
+                       StrLen(save_str) - start_pos[min_start_pos]);
+   int failCounterEnd = 0;
+   for(int j=0; j<delNum; ++j) {
+      end_pos[j] = Pos(del[j], temp_token);
+      if(end_pos[j] == -1) {failCounterEnd++;  end_pos[j] = INT_MAX;}
+   }
+
+   min_end_pos = arrayMinPos(end_pos);
+
+   token = SubStr(temp_token, 0, end_pos[min_end_pos] - start_pos[min_start_pos]);
+
+   // remove the current token
+   save_str = SubStr(save_str, end_pos[min_end_pos] + 1, StrLen(temp_token) - end_pos[min_end_pos] + 1 );
+
+   if(failCounterStart == delNum || failCounterEnd == delNum) {
+      save_str = "";
+      return no_token;
+   }
+   else
+      return token;
+}
+
+
+
+/**
+ * \brief Get tokens seperated by delimiters
+ *
+ * This function searches for tokens separated by delimiters.
+ * The tokens are copied to destination array &tokens[]
+ *
+ * \param raw_string    The string containing the tokens.
+ * \param delimiter     Delimiter between tokens.
+ * \param tokens[]      Destination array containing the tokens.
+                        Do not pass initialized arrays!
+ * \return              Number of tokens found.
+*/
+int tokenize(const string raw_string,
+             const string delimiter,
+             string &tokens[])
+{
+   string temp;
+
+   temp = strtok(raw_string, delimiter);
+
+   if(temp == "NULL")
+      return -1;
+
+   // resize array when tokens reach this value
+   // make this value bigger if you expect much tokens!
+   // make this value bigger if you have problems with process time
+   // make this value smaler if you run out of memory (File Error -1)
+   unsigned int len_threshold = 20;
+   
+   ArrayInit(tokens, "", len_threshold);  // if we get more or less tokens we resize it
+
+   tokens[0] = temp;
+   for(int i = 1; ; ++i) {
+      temp = strtok("NULL", delimiter);
+
+      if(temp == "NULL") {
+         arrayResizeStr(tokens, i);
+         return i;
+      }
+      if( i >= (len_threshold - 1) ){
+         len_threshold += 20;
+         arrayResizeStr(tokens, len_threshold);
+      }
+      
+      tokens[i] = temp;
+   }
+}
+
+/**
+ * \brief Get tokens seperated by multiple delimiters
+ *
+ * This function searches for tokens separated by delimiters
+ * The tokens are copied to destination array &tokens[]
+ *
+ * For example: string delimeters[] = {"-", " ", "/"};
+ *
+ * \param raw_string    The string containing the tokens.
+ * \param delimiters[]  Delimiter between tokens.
+ * \param tokens[]      Destination array containing the tokens.
+                        Do not pass initialized arrays!
+ * \return              Number of tokens found.
+*/
+int tokenizeEx(const string raw_string,
+               string &delimiters[],
+               string &tokens[])
+{
+   string temp;
+   
+   temp = strtokEx(raw_string, delimiters);
+   
+   if(temp == "NULL") return -1;
+   
+   // resize array when tokens reach this value
+   // make this value bigger if you expect much tokens!
+   // make this value bigger if you have problems with process time
+   // make this value smaler if you run out of memory (File Error -1)
+   unsigned int len_threshold = 20;
+   ArrayInit(tokens, "", len_threshold);  // if we get more or less tokens we resize it
+   tokens[0] = temp;
+   for(int i = 1; ; ++i) {
+      temp = strtokEx("NULL", delimiters);
+      if(temp == "NULL") {
+         arrayResizeStr(tokens, i);
+         return i;
+      }
+      if( i >= (len_threshold - 1) ) {
+         len_threshold += 20;
+         arrayResizeStr(tokens, len_threshold);
+      }
+      
+      tokens[i] = temp;
+   }
+}
+
+
+///Array indices for hsl array (Hue). \see rgb2hsl()
+#define INPUT_HUE    0
+///Array indices for hsl array (Saturation). \see rgb2hsl()
+#define INPUT_SAT    1
+///Array indices for hsl array (Lightness). \see rgb2hsl()
+#define INPUT_LIGHT  2
+
+/**
+ * \brief Convert RGB to HSL colour space
+ *
+ * Convert red, green, blue raw values to
+ * hue, saturation, lightness values to draw easier distinctions
+ * between different colors.<p>
+ * hue: 0 - 360             <br>
+ *    0   -> red            <br>
+ *    60  -> yellow  (for nxt 10-15, problems with orange, yellow) <br>
+ *    120 -> green   <br>
+ *    180 -> light blue <br>
+ *    240 -> blue        <br>
+ *    300 -> pink?             <p>
+ * saturation: 0% - 100%   (nxt color sensor sat values are usually low)  <br>
+ *    0%   -> chromatic (grey) <p>
+ * lightness: 0% - 100%        <br>
+ *   0%   -> dark   (black)    <br>
+ *   100% -> bright (white)  (throw away all measurements that have light values over 75%)
+ * <p>
+ * More information:
+ * http://en.wikipedia.org/wiki/HSL_and_HSV
+ * <p>
+ * Array indices for hsl:      <br>
+ *   #define INPUT_HUE    0    <br>
+ *   #define INPUT_SAT    1    <br>
+ *   #define INPUT_LIGHT  2    <br>
+ *
+ * \param rgb[]    An array containing at least three raw color values.
+                   See Color sensor array indices (nxc api).
+ * \param hsl[]    An initialized array containing at least three elements.
+ * \param admax    The maximum of rgb values (255 or 1024)
+*/
+void rgb2hsl(int &rgb[], int &hsl[], int admax = 1024)
+{
+   float r = rgb[0] / admax;
+   float g = rgb[1] / admax;
+   float b = rgb[2] / admax;
+   float h = 0;
+   float s = 0;
+   float l = 0;
+   float min = ArrayMin(rgb,NA,NA) / admax;
+   float max = ArrayMax(rgb,NA,NA) / admax;
+
+   l = (max + min) / 2;
+   if(l > 0) {
+      float del = max - min;
+      s = del;
+      if(s > 0) {
+         if(l < 0.5)
+            s = del / (max + min);
+         else
+            s = del / (2 - del);
+
+         if(r == max)
+            h = ( (g - b) / del ) % 6;
+         else if (g == max)
+            h = ( (b - r) / del ) + 2;
+         else if (b == max )
+            h = ( (r - g) / del ) + 4;
+      }
+   }
+   hsl[0] = (h < 0) ?  (h * 60) + 360 : (h * 60);
+   hsl[1] = s * 100;
+   hsl[2] = l * 100;
+}
+
+#endif

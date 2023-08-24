@@ -1,0 +1,48 @@
+/** \mainpage
+
+libnxter is a collection of robot utilities for lego mindstorms nxt robotics kit,
+written in NXC, and currently implements: integer matrix algebra (including
+cofactor and inverse computation), low/high pass filter, PID control and
+kalman filter. It can be directly used on the standard nxt firmware.
+
+Note: The project started as libnxt, but was renamed to libnxter after
+discovering an already existing project with similar name. SourceForge
+doesn't make it easy to move project to different name.
+
+Project: http://sourceforge.net/projects/libnxt
+
+Source repository: http://sourceforge.net/svn/?group_id=235071
+
+You need http://bricxcc.sourceforge.net/ to use the library
+
+You also need modified mindstorms nxt firmware flashed. Download it from
+http://bricxcc.sourceforge.net/lms_arm_jch.zip and flash it normally.
+
+libnxter development is blogged in my blog at:
+http://naba.blogspot.com/search/label/nxt
+
+License:
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+Author:
+
+    Naba Kumar <naba(@)gnome.org>
+
+Contributors:
+
+    Daniele Benedettelli <danielebenedettelli(@)gmail.com>
+*/
+

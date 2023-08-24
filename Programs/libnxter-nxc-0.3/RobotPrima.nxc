@@ -1,0 +1,40 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    RobotPrima.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/**
+ * \file RobotPrima.nxc
+ * \brief An experimental robotic platform for developing this library
+ */
+
+#ifndef __ROBOT_PRIMA_H_
+#define __ROBOT_PRIMA_H_
+
+#define PRIMA_WHEEL_DIAMETER       56  /* mm */
+#define PRIMA_WHEEL_AXIAL_LENGTH   83  /* mm */
+#define PRIMA_SAMPLING_RATE        100 /* msec */
+#define PRIMA_WHEEL_GEAR_RATIO     100 /* 1:1 */
+#define PRIMA_MAX_NAV_POINTS       20
+
+#define PRIMA_TOUCH_SENSOR          IN_1
+#define PRIMA_SOUND_SENSOR          IN_2
+#define PRIMA_LIGHT_SENSOR          IN_3
+#define PRIMA_RANGE_SENSOR          IN_4
+
+#endif
+

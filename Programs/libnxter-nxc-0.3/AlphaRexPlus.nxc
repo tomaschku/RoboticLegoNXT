@@ -1,0 +1,346 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    AlphaRexPlus.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+/**
+ * \file AlphaRexPlus.nxc
+ * \brief Obligatory lego mindstorms nxt alpharex program
+ */
+
+/* Power assignments */
+#define MOTOR_POWER_FAST      100
+#define MOTOR_POWER_MODERATE  75
+#define MOTOR_POWER_SLOW      30
+
+/* MOTOR PID */
+#define MOTOR_P               450
+#define MOTOR_I               0
+#define MOTOR_D               0
+
+/* Motor assignments */
+#define MOTOR_TILT            OUT_C
+#define MOTOR_STRIDE          OUT_B
+#define MOTOR_NECK            OUT_A
+
+#define NECK_CYCLE            2160
+
+/* Sensor assignments */
+#define TOUCH_SENSOR          IN_1
+#define SOUND_SENSOR          IN_2
+#define LIGHT_SENSOR          IN_3
+#define RANGE_SENSOR          IN_4
+
+/* Sensor Offset (in cycle percentage) from Neutral alignment */
+#define TOUCH_SENSOR_OFFSET     -25     /* 1/4 Cycle ahead of neutral */
+#define LIGHT_SENSOR_OFFSET      12     /* 1/10 Cycle before neutral */
+
+/* Sound sensor threshold for detecting claps */
+#define SOUND_SENSOR_THRESHOLD   60     /* Threshold for sound detection */
+
+/* Range sensor threshold for detecting obstacle */
+#define RANGE_SENSOR_THRESHOLD   50     /* cm */
+
+/* Light sensor threshold below which proximity is confirmed */
+#define LIGHT_SENSOR_PROXIMITY_THRESHOLD 40
+
+/* Tolerance degrees for cycle caliberation. Cycle count will be trimmed */
+#define CALIBERATION_ERROR_TOLERANCE     90
+
+/* Move commands */
+#define MOVE_STOP             0
+#define MOVE_FORWARD          1
+#define MOVE_LEFT             2
+#define MOVE_RIGHT            3
+#define NUM_COMMANDS          4
+
+/* Move States */
+#define LTRF                  0    /* Left tilted, right foot ahead */
+#define CLF                   1    /* Center tilted, left foot ahead */
+#define REST                  2    /* Center tilted, feets centered */
+#define CRF                   3    /* Center tilted, right foot ahead */
+#define RTLF                  4    /* Right tilted, left foot ahead */
+#define NUM_STATES            5
+
+/* Action elements index */
+#define ACTION_ELEMENT_STRIDE_FIRST  0  /* If true, stride first, else tilt first */
+#define ACTION_ELEMENT_TILT_AMOUNT   1  /* -100 to +100 percentage */
+#define ACTION_ELEMENT_STRIDE_AMOUNT 2  /* -100 to +100 percentage */
+#define NUM_ELEMENTS                 3
+
+/* Macro to retrieve action elements from above state transition action table */
+#define GetActionElement(int prevState, int nextState, int element) \
+     stateTransitionAction[prevState * NUM_STATES * NUM_ELEMENTS \
+                           + nextState * NUM_ELEMENTS \
+                           + element]
+
+/* Executed upon entering a state */
+int stateTransitionAction[] = {
+/* ---------|-----------------------------------------------------------------*/
+/*          |  (nextState)                                                    */
+/* prevState|   LTRF        CLF           REST         CRF          RTLF      */
+/* ---------|-----------------------------------------------------------------*/
+/* LTRF     |*/ 0,  0,  0,   0,-25, 50,   1,-25, 25,   0,-25,  0,   0,-50, 50,
+/* CLF      |*/ 0, 25,-50,   0,  0,  0,   0,  0,-25,   0,  0,-50,   0,-25,  0,
+/* REST     |*/ 0, 25,-25,   0,  0, 25,   0,  0,  0,   0,  0,-25,   0,-25, 25,
+/* CRF      |*/ 0, 25,  0,   0,  0, 50,   0,  0, 25,   0,  0,  0,   0,-25, 50,
+/* RTLF     |*/ 0, 50,-50,   0, 25,  0,   1, 25,-25,   0, 25,-50,   0,  0,  0,
+/* ---------|------------------------------------------------------------------*/
+};
+
+/* State transitions table */
+int stateTransition[] = {
+/* ---------|-----------------------------------------------------------------*/
+/*          |   MOVE_STOP  MOVE_FORWARD  MOVE_LEFT  MOVE_RIGHT */
+/* ---------|-----------------------------------------------------------------*/
+/* LTRF     |*/   REST,      RTLF,       CLF,      RTLF,
+/* CLF      |*/   REST,      LTRF,       LTRF,     RTLF,
+/* REST     |*/   REST,      LTRF,       LTRF,     RTLF,
+/* CRF      |*/   REST,      LTRF,       LTRF,     RTLF,
+/* RTLF     |*/   REST,      LTRF,       LTRF,     CRF,
+/* ---------|-----------------------------------------------------------------*/
+};
+
+mutex moveMutex;
+int moveCommand = MOVE_STOP;
+int moveState = REST;
+int tiltCycleCount, strideCycleCount;
+
+void startMotor(int motor, int power)
+{
+     SetOutput(motor, OutputMode, OUT_MODE_MOTORON | OUT_MODE_BRAKE);
+     SetOutput(motor, Power, power);
+     SetOutput(motor, UpdateFlags, UF_UPDATE_MODE | UF_UPDATE_SPEED |
+               UF_UPDATE_RESET_BLOCK_COUNT);
+     SetOutput(motor, RunState, OUT_RUNSTATE_RUNNING);
+}
+
+void stopMotor(int motor)
+{
+     SetOutput(motor, RunState, OUT_RUNSTATE_IDLE);
+     SetOutput(motor, OutputMode, 0);
+     SetOutput(motor, Power, 0);
+     SetOutput(motor, UpdateFlags, UF_UPDATE_SPEED);
+}
+
+int RotateAngle(int motor, int power, int angle, int PValue, int IValue, int DValue)
+{
+     int pidScale = 1000;
+     int samplePeriod = 20; /* ms */
+     int dt = 1; /* 1dt == 20 msec */
+     int outputScale = 2;
+     int I = 0;
+     int lastError = 0;
+     int steadyStateCount = 0;
+
+     /* Speed is evaluated in the loop below */
+     startMotor(motor, 0);
+
+     while(steadyStateCount < 5)
+     {
+         int absPower = Abs(power);
+         int error = angle - GetOutput(motor, BlockTachoCount);
+
+         /* If error hasn't changed for last 5 samples, quit */
+         if ((error - lastError) == 0)
+             steadyStateCount++;
+
+         int P = PValue * error / pidScale;
+         I += IValue * error * dt / pidScale;
+         int D = (DValue / dt) * (error - lastError) / pidScale;
+         int output = outputScale * (P + I + D);
+         if (output > absPower) output = absPower;
+         if (output < -absPower) output = -absPower;
+         SetOutput(motor, Power, output);
+         SetOutput(motor, UpdateFlags, UF_UPDATE_SPEED);
+         lastError = error;
+         Wait(dt * samplePeriod);
+     }
+     stopMotor(motor);
+     return lastError;
+}
+
+int GetSensorProximity (int sensor)
+{
+    if (sensor == TOUCH_SENSOR)
+       return Sensor(TOUCH_SENSOR);
+    if (Sensor(LIGHT_SENSOR) < LIGHT_SENSOR_PROXIMITY_THRESHOLD)
+       return 1;
+    else
+       return 0;
+}
+
+int CaliberateMotor(int motor, int sensor, int postAlignmentPercentage)
+{
+    int extremeTachoMin;
+    int extremeTachoMax;
+    int cycleCountMin;
+    int cycleCountMax;
+    int cycleCount;
+    int alignDegrees;
+
+    /* Start motor and monitor sensor for rythm cycle */
+    startMotor(motor, MOTOR_POWER_FAST);
+     
+    /*vxbxcds21111 First let the sensor get out of active state */
+    while (GetSensorProximity(sensor));
+     
+    /* Wait for sensor to activate */
+    while (!GetSensorProximity(sensor));
+    
+    /* Start both extreme count and cycle count */
+    extremeTachoMin = GetOutput(motor, TachoCount);
+    cycleCountMin = extremeTachoMin;
+    
+    /* Wait for sensor to deactivate */
+    while (GetSensorProximity(sensor));
+
+    /* end count */
+    extremeTachoMax = GetOutput(motor, TachoCount);
+
+    /* Wait for sensor to activate again */
+    while (!GetSensorProximity(sensor));
+
+    /* End cycle count */
+    cycleCountMax = GetOutput(motor, TachoCount);
+    
+    /* Stop the motor */
+    stopMotor(motor);
+    
+    /* Correct any error within cycle count */
+    cycleCount = cycleCountMax - cycleCountMin;
+    int errorCycleCount = cycleCount % CALIBERATION_ERROR_TOLERANCE;
+    if (errorCycleCount < CALIBERATION_ERROR_TOLERANCE/2)
+       cycleCount -= errorCycleCount;
+    else
+       cycleCount += CALIBERATION_ERROR_TOLERANCE - errorCycleCount;
+    
+    /* Align the moter to neutral */
+    /* Move the tacho limit to neutralAlignment + 1/2 extreme sensor period */
+    alignDegrees = (cycleCount * postAlignmentPercentage)/100 +
+                    (extremeTachoMax - extremeTachoMin)/2;
+    RotateAngle(motor, MOTOR_POWER_FAST, alignDegrees, MOTOR_P, MOTOR_I, MOTOR_D);
+
+    return cycleCount;
+}
+
+task Movement()
+{
+     while(true)
+     {
+         int command = moveCommand;
+         int nextState = stateTransition[moveState * NUM_COMMANDS + command];
+
+         /* Demultiplex state data */
+         /* Each tilt/stride fraction is 1/8 of cycle */
+         int strideFirst =    GetActionElement(moveState, nextState,
+                                               ACTION_ELEMENT_STRIDE_FIRST);
+         int tiltFraction =   GetActionElement(moveState, nextState,
+                                               ACTION_ELEMENT_TILT_AMOUNT);
+         int strideFraction = GetActionElement(moveState, nextState,
+                                               ACTION_ELEMENT_STRIDE_AMOUNT);
+
+         if (tiltFraction && !strideFirst)
+             RotateAngle(MOTOR_TILT, MOTOR_POWER_FAST,
+                         (tiltCycleCount * tiltFraction)/100,
+                         MOTOR_P, MOTOR_I, MOTOR_D);
+         if (strideFraction)
+             RotateAngle(MOTOR_STRIDE, MOTOR_POWER_FAST,
+                         (strideCycleCount * strideFraction)/100,
+                         MOTOR_P, MOTOR_I, MOTOR_D);
+         if (tiltFraction && strideFirst)
+             RotateAngle(MOTOR_TILT, MOTOR_POWER_FAST,
+                         (tiltCycleCount * tiltFraction)/100,
+                         MOTOR_P, MOTOR_I, MOTOR_D);
+          if (moveState == nextState)
+              Wait(1000);
+          moveState = nextState;
+     }
+}
+
+task Navigation()
+{
+    while(true)
+    {
+        /* Continue turning left as long as there is an obstacle in front */
+        if(SensorUS(RANGE_SENSOR) < RANGE_SENSOR_THRESHOLD)
+        {
+            Acquire(moveMutex);
+            if (moveCommand == MOVE_FORWARD)
+            {
+                moveCommand = MOVE_LEFT;
+            }
+            Release(moveMutex);
+        }
+        else /* Go straight ahead if there is no obstacle any more */
+        {
+            Acquire(moveMutex);
+            if (moveCommand == MOVE_LEFT)
+            {
+                moveCommand = MOVE_FORWARD;
+            }
+            Release(moveMutex);
+        }
+    }
+}
+
+task CommandCenter()
+{
+    while(true)
+    {
+        while(Sensor(SOUND_SENSOR) < SOUND_SENSOR_THRESHOLD) Wait(20);
+        Acquire(moveMutex);
+        if (moveCommand == MOVE_STOP)    /* First clap to move */
+        {
+            moveCommand = MOVE_FORWARD;
+        }
+        else
+        {
+            moveCommand = MOVE_STOP;      /* Second clap to stop */
+        }
+        Release(moveMutex);
+        Wait(1000);
+    }
+}
+
+task main ()
+{
+     SetSensorTouch(TOUCH_SENSOR);
+     SetSensorLight(LIGHT_SENSOR);
+     SetSensorSound(SOUND_SENSOR);
+     SetSensorLowspeed(RANGE_SENSOR);
+     
+     /* Give user time to get out of way */
+     Wait (1000);
+     
+     /* Calibrate robot position and determine tilt and stride cycles */
+     tiltCycleCount = CaliberateMotor(MOTOR_TILT, TOUCH_SENSOR, 0);
+     strideCycleCount = CaliberateMotor(MOTOR_STRIDE, LIGHT_SENSOR, 0);
+     
+     /* Bring to neutral */
+     RotateAngle(MOTOR_STRIDE, MOTOR_POWER_FAST,
+                 strideCycleCount * (LIGHT_SENSOR_OFFSET)/100,
+                 MOTOR_P, MOTOR_I, MOTOR_D);
+     RotateAngle(MOTOR_TILT, MOTOR_POWER_FAST,
+                 tiltCycleCount * (TOUCH_SENSOR_OFFSET)/100,
+                 MOTOR_P, MOTOR_I, MOTOR_D);
+
+     start Navigation;
+     start Movement;
+     start CommandCenter;
+}
+

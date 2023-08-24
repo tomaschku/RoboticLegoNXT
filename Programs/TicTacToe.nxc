@@ -1,0 +1,61 @@
+#include "\Libraries\EasyCoding.nxc"
+
+struct tile {
+ bool set;
+ bool isX;
+};
+
+bool Won;
+bool WonX;
+bool isX;
+int NextReihe;
+int NextSpalte;
+tile board[3][3];
+
+string bgc(int reihe, int spalte) {//Board_get_char
+ if(board[reihe][spalte].set) {
+  if(board[reihe][spalte].isX) { return "X"; } else { return "O"; };
+ } else { return "#"; };
+};
+
+
+void printBoard() {
+ string lcd[8];
+ lcd[0] = "----------------";
+ lcd[1] = "| "+bgc(0,0)+" | "+bgc(0,1)+" | "+bgc(0,2)+" | ";
+ lcd[1] = "| "+bgc(1,0)+" | "+bgc(1,1)+" | "+bgc(1,2)+" | ";
+ lcd[1] = "| "+bgc(2,0)+" | "+bgc(2,1)+" | "+bgc(2,2)+" | ";
+ lcd[4] = "                ";
+
+ lcd[5] = " ----------- ";
+
+ if(isX) {lcd[6] = "| X ist dran! |";} else {lcd[6] = "| O ist dran! |";};
+ lcd[7] = "----------------";
+ if(!ScreenOut(lcd)) { pause(); };
+};
+
+
+task main() {
+ for(int spalte = 0; spalte < 3; spalte++) {
+  for(int reihe = 0; reihe < 3; reihe++) {
+   board[reihe][spalte].set = false;//safe first, then overwrite from tmp var
+   board[reihe][spalte].isX = false;
+  };
+ };
+
+ isX = false;
+ Won = false;
+ WonX = false;
+ 
+ while(!Won) {
+  printBoard();
+
+  NextReihe = GetNumber("Reihe -", 1, 3);
+  NextSpalte = GetNumber("Spalte |", 1, 3);
+
+  board[NextReihe-1][NextSpalte-1].set = true;
+  board[NextReihe-1][NextSpalte-1].isX = isX;
+
+  isX = !isX;
+ };
+};

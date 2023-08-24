@@ -1,0 +1,242 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Screen.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/**
+ * \file Screen.nxc
+ * \brief Display functions for text and graphs
+ */
+
+#ifndef __SCREEN_H_
+#define __SCREEN_H_
+
+#include "Vector.nxc"
+
+#define NXT_SCREEN_ROWS   8
+#define NXT_SCREEN_COLS   11
+#define NXT_CHAR_HEIGHT   8
+#define NXT_CHAR_LENGTH   8
+#define NXT_SCREEN_X      110
+#define NXT_SCREEN_Y      64
+
+#define PLOT_TYPE_LINE    1
+#define PLOT_TYPE_POINT   2
+#define PLOT_TYPE_CIRCLE  3
+#define PLOT_TYPE_SQUARE  4
+
+struct Plotter
+{
+    long lastX;
+    long lastY;
+    long minX;
+    long maxX;
+    long minY;
+    long maxY;
+    int plotType;
+};
+
+mutex screenMutex;
+bool screenInitialized = 0;
+int screen_row = 0;
+string screen_TextBuffer[];
+
+/* Private function. Initializes the screen on first screen function call */
+void ScreenInit()
+{
+    Acquire(screenMutex);
+    ClearScreen();
+    ArrayInit(screen_TextBuffer, " ", NXT_SCREEN_ROWS);
+    screenInitialized = 1;
+    Release(screenMutex);
+}
+
+/**
+ * \brief Clears screen
+ */
+void ScreenClear()
+{
+    Acquire(screenMutex);
+    ClearScreen();
+    screen_row = 0;
+    Release(screenMutex);
+}
+
+/* Private function. Scrolls the the screen by one line */
+void ScreenScroll()
+{
+    Acquire(screenMutex);
+    while (screen_row >= NXT_SCREEN_ROWS)
+    {
+        /* Scroll */
+        ClearScreen();
+        for (int i = 1; i < NXT_SCREEN_ROWS; i++)
+        {
+            int j = i - 1;
+            string data = screen_TextBuffer[i];
+            screen_TextBuffer[j] = data;
+            int y = (NXT_SCREEN_ROWS - j - 1) * NXT_CHAR_HEIGHT;
+            TextOut(0, y, data, false);
+        }
+        screen_row--;
+    }
+    Release(screenMutex);
+}
+
+/**
+ * \brief Prints a line of text. It scrolls the screen if there no line left
+ */
+void PrintText(string text, int waitTime)
+{
+    Acquire(screenMutex);
+    if (screenInitialized == 0) ScreenInit();
+    if (screen_row >= NXT_SCREEN_ROWS) ScreenScroll();
+    screen_TextBuffer[screen_row] = text;
+    int y = ((NXT_SCREEN_ROWS - 1 - screen_row) * NXT_CHAR_HEIGHT);
+    TextOut(0, y, text, false);
+    screen_row++;
+    if (waitTime > 0) Wait(waitTime);
+    Release(screenMutex);
+}
+
+/**
+ * \brief Prints a number. It scrolls the screen if there no line left
+ */
+void PrintNum(long num, int waitTime)
+{
+    Acquire(screenMutex);
+    if (screenInitialized == 0) ScreenInit();
+    if (screen_row >= NXT_SCREEN_ROWS) ScreenScroll();
+    screen_TextBuffer[screen_row] = NumToStr(num);
+    int y = ((NXT_SCREEN_ROWS - 1 - screen_row) * NXT_CHAR_HEIGHT);
+    NumOut(0, y, num, false);
+    screen_row++;
+    if (waitTime > 0) Wait(waitTime);
+    Release(screenMutex);
+}
+
+/**
+ * \brief Prints a formated string with a number.
+ * It scrolls the screen if there no line left
+ */
+void Print(string format, long num, int waitTime)
+{
+    Acquire(screenMutex);
+    if (screenInitialized == 0) ScreenInit();
+    if (screen_row >= NXT_SCREEN_ROWS) ScreenScroll();
+    screen_TextBuffer[screen_row] = formatNum(format, num);
+    int y = ((NXT_SCREEN_ROWS - 1 - screen_row) * NXT_CHAR_HEIGHT);
+    TextOut(0, y, screen_TextBuffer[screen_row], false);
+    screen_row++;
+    if (waitTime > 0) Wait(waitTime);
+    Release(screenMutex);
+}
+
+/**
+ * \brief Initializes a plotter. There can be multiple plotters (for each
+ * graph) active simultaneous to draw on screen.
+ */
+void PlotterInit(Plotter &plotter, int plotType,
+                 long minX, long maxX, long minY, long maxY)
+{
+    plotter.minX = minX;
+    plotter.maxX = maxX;
+    plotter.minY = minY;
+    plotter.maxY = maxY;
+    plotter.lastX = 0;
+    plotter.lastY = 0;
+    plotter.plotType = plotType;
+}
+
+/**
+ * \brief Plots the given point using the plotter on screen.
+ */
+void PlotterPlot(Plotter &plotter, long x, long y)
+{
+     Acquire(screenMutex);
+     x = (x - plotter.minX) * NXT_SCREEN_X / (plotter.maxX - plotter.minX);
+     y = (y - plotter.minY) * NXT_SCREEN_Y / (plotter.maxY - plotter.minY);
+
+     if (plotter.plotType != PLOT_TYPE_LINE)
+     {
+         if (x < NXT_SCREEN_X && y > 0)
+         {
+             if (plotter.plotType == PLOT_TYPE_CIRCLE)
+                 CircleOut(x, y, 2, false);
+             else if (plotter.plotType == PLOT_TYPE_POINT)
+                 PointOut(x, y, false);
+             else if (plotter.plotType == PLOT_TYPE_SQUARE)
+                 RectOut(x, y, 2, 2, false);
+         }
+     }
+     if (x > NXT_SCREEN_X) x = NXT_SCREEN_X;
+     if (y < 0) y = 0;
+
+     if (plotter.plotType == PLOT_TYPE_LINE && plotter.lastX != 0 && plotter.lastY != 0)
+         LineOut(plotter.lastX, plotter.lastY, x, y, false);
+
+     plotter.lastX = x;
+     plotter.lastY = y;
+     Release(screenMutex);
+}
+
+/**
+ * \brief Plots the given vector (x,y) using the plotter on screen.
+ */
+void PlotterPlotVector(Plotter &plotter, Vector &vec)
+{
+     PlotterPlot(plotter, vec.x, vec.y);
+}
+
+#ifdef ENABLE_TEST
+
+void TestScreen()
+{
+     PrintText("some text1", 500);
+     PrintText("some text2", 500);
+     PrintText("some text3", 500);
+     PrintText("some text4", 500);
+     PrintText("some text5", 500);
+     PrintText("some text6", 500);
+     PrintText("some text7", 500);
+     PrintText("some text8", 500);
+     PrintText("some text9", 500);
+     PrintText("some text10", 500);
+     PrintText("some text11", 500);
+     PrintNum(2341, 500);
+     PrintNum(2342, 500);
+     PrintNum(2343, 500);
+     PrintNum(2344, 500);
+     PrintNum(2345, 500);
+     Print("Format: %d", 501, 500);
+     Print("Format: %d", 502, 500);
+     Print("Format: %d", 503, 500);
+     Print("Format: %d", 504, 500);
+     Wait(2000);
+}
+
+/*
+task main()
+{
+    TestScreen();
+}
+*/
+
+#endif /* ENABLE_TEST */
+#endif /* __SCREEN_H_ */
+

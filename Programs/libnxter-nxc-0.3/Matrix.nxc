@@ -1,0 +1,875 @@
+/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*- */
+/*
+    Matrix.nxc
+    Copyright (C) 2008 Naba Kumar   <naba@gnome.org>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+/**
+ * \file Matrix.nxc
+ * \brief Integer matrix implementation. Provides matrix algebra, cofactor,
+ * adjugate and inverse computation.
+ */
+
+#ifndef __MATRIX_H_
+#define __MATRIX_H_
+
+//#define ENABLE_DEBUG
+//#define ENABLE_TEST
+#include "Debug.nxc"
+//#define ASSERT(a,b)
+//#define TEST(a,b)
+
+#define LONG_MAX       2147483647 /* 2^31 - 1 */
+
+/**
+ * \brief Gives direct access to an element in matrix m, at row i and col j.
+ *
+ * It can be used both as left-hand and right-hand operants. It can be
+ * used both as left-hand and right-hand operants, i.e. 'MI(m,i) = value' or
+ * 'variable = MI(m,i)'.
+ */
+#define MIJ(m,i,j)     m.elements[(i) * m.cols + (j)]
+
+/**
+ * \brief Gives direct one-dimentional access to an element in matrix m, at
+ * the index i. Index i is calculated as (row * cols + col).
+ *
+ * This access is
+ * more efficient than 2D access with MIJ() because it skips index calculation
+ * (one multiply and one addition) and is useful if all elements need to be
+ * accessed during a matrix operation (e.g. during an addition). It can be
+ * used both as left-hand and right-hand operants, i.e. 'MI(m,i) = value' or
+ * 'variable = MI(m,i)'.
+ */
+#define MI(m,i)        m.elements[i]
+
+/**
+ * \brief The matrix class. Don't access the members directly. Use the
+ * macros MIJ() or MI() or the methods provided instead.
+ */
+struct Matrix
+{
+    long elements[]; /**< The matrix elements */
+    int rows;        /**< Rows count of the matrix */
+    int cols;        /**< Columns count of the matrix */
+    int size;        /**< Size of the matrix = rows * cols */
+};
+
+/**
+ * \brief Initializes a matrix to a matrix of size rows x cols and
+ * fills it with 0s.
+ */
+void MatrixInit(Matrix &matrix, int rows, int cols)
+{
+    matrix.rows = rows;
+    matrix.cols = cols;
+    matrix.size = rows * cols;
+    ArrayInit(matrix.elements, 0, matrix.size);
+}
+
+/**
+ * \brief Initializes a matrix to a matrix of size rows x cols and
+ * fills it with elements from given array.
+ *
+ * The array should contain rows * cols elemements and is accessed flatly
+ * with (i * rows + cols).
+ */
+void MatrixInitElements(Matrix &matrix, int rows, int cols, long &elements[])
+{
+    matrix.rows = rows;
+    matrix.cols = cols;
+    matrix.size = rows * cols;
+    ArrayBuild(matrix.elements, elements);
+}
+
+/**
+ * \brief Initializes a matrix to an Identity matrix of size
+ * rows x cols, with all elements except diagonal elements set to 0s and
+ * diagonal elements set to 1s.
+ */
+void MatrixInitIdentity(Matrix &matrix, int rows, int cols)
+{
+    matrix.rows = rows;
+    matrix.cols = cols;
+    matrix.size = rows * cols;
+    ArrayInit(matrix.elements, 0, matrix.size);
+    for (int i = 0, j = 0; i < rows; i++, j++)
+        matrix.elements[i * cols + j] = 1;
+}
+
+/**
+ * \brief Initializes a matrix to a diagonal matrix of size rows x cols,
+ * with all elements except diagonal elements set to 0s and
+ * diagonal elements set to given value.
+ */
+void MatrixInitDiagonal(Matrix &matrix, int rows, int cols, long value)
+{
+    matrix.rows = rows;
+    matrix.cols = cols;
+    matrix.size = rows * cols;
+    ArrayInit(matrix.elements, 0, matrix.size);
+    for (int i = 0, j = 0; i < rows; i++, j++)
+        matrix.elements[i * cols + j] = value;
+}
+
+/**
+ * \brief Returns the value of element in matrix given by row x col.
+ * This is exactly same as macro MIJ(), but in functional form.
+ */
+inline long MatrixGet(Matrix &matrix, int row, int col)
+{
+    return matrix.elements[matrix.cols * row + col];
+}
+
+/**
+ * \brief Sets the given value to the element in matrix given by row x col.
+ * This is exactly same as assigning to macro MIJ(), but in functional form.
+ */
+inline void MatrixSet(Matrix &matrix, int row, int col, long value)
+{
+    matrix.elements[matrix.cols * row + col] = value;
+}
+
+/**
+ * \brief Compares the two matrixes. A and B, and returns true if they are
+ * equal otherwise returns false. Equality involves each and every element
+ * being equal.
+ */
+bool MatrixCompare (Matrix &matrixA, Matrix &matrixB)
+{
+    if (matrixA.rows != matrixB.rows || matrixA.cols != matrixB.cols)
+        return false;
+
+    for (int i = 0; i < matrixA.size; i++)
+       if (MI(matrixA, i) != MI(matrixB, i))
+           return false;
+    return true;
+}
+
+/**
+ * \brief Returns true if the matrix is NULL, i.e. all elemants are 0.
+ */
+bool MatrixIsNull (Matrix &matrix)
+{
+    long flag;
+    for (int i = 0; i < matrix.size; i++)
+         flag |= MI(matrix, i);
+    if (flag) return false;
+    return true;
+}
+
+/**
+ * \brief Converts the given matrix into its Transpose, i.e. the matrix
+ * is flipped along its diagonal (top-left to bottom-right).
+ */
+void MatrixTranspose (Matrix &matrix)
+{
+    ASSERT(matrix.rows == matrix.cols, "Matrix is not square");
+    
+    for (int i = 0; i < matrix.rows; i++)
+        for (int j = i; j < matrix.cols; j++)
+            if (i != j)
+            {
+                long tmp1 = MatrixGet(matrix, i, j);
+                long tmp2 = MatrixGet(matrix, j, i);
+                MatrixSet(matrix, i, j, tmp2);
+                MatrixSet(matrix, j, i, tmp1);
+            }
+}
+
+/**
+ * \brief Returns the largest value of 'absolute' values of elements
+ * in the matrix. It is useful to determine the 'scale' of the matrix.
+ */
+long MatrixMaxima (Matrix &matrix)
+{
+    long maxima = 0;
+    for (int i = 0; i < matrix.size; i++)
+    {
+        long element = Abs(MI(matrix, i));
+        if (element > maxima)
+            maxima = element;
+    }
+    return maxima;
+}
+
+/**
+ * \brief Returns the smallest value of 'absolute' values of elements
+ * in the matrix, discounting 0s. It is useful to determine the lower 'scale'
+ * of the matrix.
+ */
+long MatrixMinima (Matrix &matrix)
+{
+    long minima = LONG_MAX;
+    for (int i = 0; i < matrix.size; i++)
+    {
+        long element = Abs(MI(matrix, i));
+        if (element && element < minima)
+            minima = element;
+     }
+     return minima;
+}
+
+/**
+ * \brief Binary shifts all elements of the matrix right by the amount numShift
+ */
+inline void MatrixShiftLeft (Matrix &matrix, int numShift)
+{
+    if (numShift)
+        for (int i = 0; i < matrix.size; i++)
+            MI(matrix, i) <<= numShift;
+}
+
+/**
+ * \brief Binary shifts all elements of the matrix left by the amount numShift
+ */
+inline void MatrixShiftRight (Matrix &matrix, int numShift)
+{
+    if (numShift)
+        for (int i = 0; i < matrix.size; i++)
+            MI(matrix, i) >>= numShift;
+}
+
+/**
+ * \brief Adds matrix B to matrix A. i.e. A += B
+ */
+inline void MatrixAdd (Matrix &matrixA, Matrix &matrixB)
+{
+    ASSERT(matrixA.rows == matrixB.rows && matrixB.cols == matrixB.cols,
+           "Matrix Addtion invalid size");
+
+    for (int i = 0; i < matrixA.size; i++)
+        MI(matrixA, i) = MI(matrixA, i) + MI(matrixB, i);
+}
+
+/**
+ * \brief Subtracts matrix B from matrix A. i.e. A -= B
+ */
+inline void MatrixSubtract (Matrix &matrixA, Matrix &matrixB)
+{
+    ASSERT(matrixA.rows == matrixB.rows && matrixB.cols == matrixB.cols,
+           "Matrix Addtion invalid size");
+
+    for (int i = 0; i < matrixA.size; i++)
+        MI(matrixA, i) = MI(matrixA, i) - MI(matrixB, i);
+}
+
+/**
+ * \brief Multiplies matrix A with B and stores the result in matrix C.
+ * i.e. C = A * B. Matrix C must not be same variable as matrix A or B,
+ * because all of them are passed as reference.
+ */
+void MatrixMultiply (Matrix &matrixA, Matrix &matrixB, Matrix &matrixC)
+{
+    ASSERT(matrixA.cols == matrixB.rows, "Mismatch matrix sizes");
+
+    MatrixInit(matrixC, matrixA.rows, matrixB.cols);
+    for (int i = 0; i < matrixA.rows; i++)
+        for (int j = 0; j < matrixB.cols; j++)
+            for (int k = 0; k < matrixA.cols; k++)
+                MatrixSet(matrixC, i, j, (MatrixGet(matrixC, i, j) +
+                          MatrixGet(matrixA, i, k) * MatrixGet(matrixB, k, j)));
+}
+
+/**
+ * \brief Scales all elements in matrix A by given scale factor.
+ * i.e. A *= scale
+ */
+inline void MatrixScale (Matrix &matrix, long scale)
+{
+    for (int i = 0; i < matrix.size; i++)
+        MI(matrix, i) *= scale;
+}
+
+/** \brief Reduces (i.e. scales down) all elements in matrix A by given
+ * reduction factor. i.e. A /= scale
+ */
+inline void MatrixReduce (Matrix &matrix, long scale)
+{
+    for (int i = 0; i < matrix.size; i++)
+        MI(matrix, i) /= scale;
+}
+
+/**
+ * \brief Computes a minor matrix, designated Minor (i,j), for the given matrix
+ * and returns it in matrixM. i.e. M(i, j) = Minor of A(i, j). MatrixM must
+ * not be the same variable as matrix because they are passed as references.
+ */
+void MatrixMinor(Matrix &matrix, int minorI, int minorJ, Matrix &matrixM)
+{
+    int mI = 0, mJ = 0;
+
+    ASSERT(matrix.rows == matrix.cols, "Matrix is not square");
+    ASSERT(matrix.rows > 1, "Matrix is not > 1x1");
+
+    MatrixInit(matrixM, matrix.rows - 1, matrix.cols - 1);
+    for (int i = 0; i < matrix.rows; i++)
+    {
+        if (i == minorI) continue;
+        for (int j = 0; j < matrix.cols; j++)
+        {
+            if (j == minorJ) continue;
+            MatrixSet(matrixM, mI, mJ, MatrixGet(matrix, i, j));
+            mJ++;
+        }
+        mJ = 0;
+        mI++;
+    }
+}
+
+/**
+ * \brief Direct diterminat computation for matrix <= 3x3 size. For larger size,
+ * see MatrixDiterminant() below.
+ */
+long MatrixDeterminant3(Matrix &matrix)
+{
+    ASSERT(matrix.rows == matrix.cols, "Matrix is not square");
+    ASSERT(matrix.rows > 0 && matrix.rows <= 3, "Invalid matrix size");
+    
+    if (matrix.rows == 1)
+        return MI(matrix, 0);
+    if (matrix.rows == 2)
+        return MI(matrix, 0) * MI(matrix, 3) - MI(matrix, 2) * MI(matrix, 1);
+    return
+        MI(matrix, 0) * MI(matrix, 4) * MI(matrix, 8) -
+        MI(matrix, 0) * MI(matrix, 5) * MI(matrix, 7) -
+        MI(matrix, 1) * MI(matrix, 3) * MI(matrix, 8) +
+        MI(matrix, 1) * MI(matrix, 5) * MI(matrix, 6) +
+        MI(matrix, 2) * MI(matrix, 3) * MI(matrix, 7) -
+        MI(matrix, 2) * MI(matrix, 4) * MI(matrix, 6) ;
+}
+
+/**
+ * \brief Computes and returns the cofactor of row i and col j of
+ * matrixIn.
+ *
+ * It computes the cofactor at (i,j) by recursive method. Functional
+ * recursion is not possible with NXC so it is implemented using internal
+ * stack to emulate recursion using iterative method. It's very inefficient
+ * for matrix larger than 4x4 size. It's such a mess when there is no
+ * recursive support in NXC :(
+ */
+long MatrixCofactorIJ (Matrix &matrixIn, int i, int j)
+{
+    struct RecurseData
+    {
+        int i; int j; /* Inputs to the frame */
+        long minorDet; int x; int flip; int row; /* Intermediate variables in frame */
+        long cofactorIJ; /* Output from the frame */
+    };
+    RecurseData stack[10];
+    RecurseData frame;
+    
+    /* Separate stack for matrices because NXC doesn't seem to work
+     * with array of struct of struct so can't use RecurseData for them.
+     */
+    Matrix matrixStack[];
+    Matrix minor, matrix;
+
+    ASSERT(matrixIn.rows == matrixIn.cols, "Matrix is not square");
+    ASSERT(matrixIn.rows >= 1, "Matrix is not >= 1x1");
+    if (matrixIn.rows == 1)
+        return 1;
+
+    int l = 0;
+    /* Depth of the recursion tree is N */
+    ArrayInit(stack, frame, matrixIn.rows);
+    ArrayInit(matrixStack, matrix, matrixIn.rows);
+
+    /* Set frame 0 */
+    frame.i = i;
+    frame.j = j;
+    stack[0] = frame;
+    matrixStack[0] = matrixIn;
+    matrix = matrixIn; //matrixStack[l];
+
+recurseEnter:
+    /* C(i,j) = (-1)^(i+j) |M(i,j)| */
+
+    frame.minorDet = 0;
+
+    /* flip = (-1)^(i + j) */
+    if ((frame.i + frame.j) & 1) frame.flip = -1;
+    else frame.flip = 1;
+    
+    /* Get Minor(i,j) */
+    MatrixMinor(matrix, frame.i, frame.j, minor);
+    
+    /* Compute minor determinant |M| */
+    if (minor.rows < 4)
+    {
+        frame.minorDet = MatrixDeterminant3(minor);
+    }
+    else
+    {
+        /* |M| = m(0,1) * Cm(0,1) + m(0,2) * Cm(0,2) + .. + m(0,n) * Cm(0,n) */
+        for (frame.row = 0; frame.row < minor.rows; frame.row++)
+        {
+            frame.x = MatrixGet(minor, 0, frame.row);
+            
+            /* Push frame: Prepare for recursion. */
+            stack[l] = frame;
+            int rowSave = frame.row;
+            /* Push end */
+
+            /* Set next frame */
+            l++;
+            frame.i = 0;
+            frame.j = rowSave;
+            matrixStack[l] = minor;
+            matrix = minor;
+
+            goto recurseEnter;
+            /* Doing: retCofactorIJ = MatrixCofactorIJ(minor, 0, row) */
+            
+recurseExit:
+            /* Result of last frame */
+            long retCofactorIJ = frame.cofactorIJ;
+            minor = matrixStack[l];
+            
+            /* Pop frame from stack */
+            l--;
+            matrix = matrixStack[l];
+            frame = stack[l];
+            /* Pop end */
+            
+            frame.minorDet += frame.x * retCofactorIJ;
+        }
+    }
+    frame.cofactorIJ = frame.minorDet * frame.flip;
+    if (l > 0) goto recurseExit;
+    return frame.cofactorIJ;
+}
+
+/** \brief Finds the cofactor matrix of a given matrix. Cofactor matrix is
+ * a matrix with each element (i,j) set to cofactor of the matrix for (i,j).
+ */
+void MatrixCofactor (Matrix &matrix, Matrix &retCofactor)
+{
+    ASSERT(matrix.rows == matrix.cols, "Matrix is not square");
+    ASSERT(matrix.rows >= 1, "Matrix size is not >= 1x1");
+
+    MatrixInit(retCofactor, matrix.rows, matrix.cols);
+    for (int i = 0; i < matrix.rows; i++)
+        for (int j = 0; j < matrix.cols; j++)
+        {
+            long cofac = MatrixCofactorIJ(matrix, i, j);
+            MatrixSet(retCofactor, i, j, cofac);
+        }
+}
+
+/**
+ * \brief Finds the determinant of a matrix. For matrix smaller than 4x4,
+ * it is exactly same as MatrixDeterminant3().
+ *
+ * The determinant is computed using recursive cofactor method (the least
+ * efficient method) for matrix larger than 3x3. so be aware of performance
+ * for large matrixes. For smaller matrix (i.e. size less than or equal to
+ * 3x3, it will invoke MatrixDeterminant3() anyways which uses direct
+ * computation.
+ */
+long MatrixDeterminant (Matrix &matrix)
+{
+    if (matrix.rows < 4)
+        return MatrixDeterminant3(matrix);
+
+    ASSERT(matrix.rows == matrix.cols, "Matrix is not square");
+
+    /* |A| = a(0,1) * C(0,1) + a(0,2) * C(0,2) + ... + a(0,n) * C(0,n) */
+
+    long det = 0;
+    for (int i = 0; i < matrix.rows; i++)
+        det += MatrixGet(matrix, 0, i) * MatrixCofactorIJ(matrix, 0, i);
+    return det;
+}
+
+/**
+ * \brief Finds the adjugate (aka ajoint) of a matrix. Adjugate of a
+ * matrix is basically a transpose of its cofactor matrix.
+ */
+void MatrixAdjugate (Matrix &matrix, Matrix &retAdjugate)
+{
+     MatrixCofactor(matrix, retAdjugate);
+     MatrixTranspose(retAdjugate);
+}
+
+/**
+ * \brief Prints the matrix on screen with the given title and follows it
+ * with a wait of pauseSecs. Useful for debugging.
+ */
+void MatrixPrint (Matrix &matrix, string title, int pauseSecs)
+{
+    ClearScreen();
+    TextOut(0, LCD_LINE1, "----------------------");
+    TextOut(0, LCD_LINE1, title);
+    for (int i = 1; i <= matrix.rows; i++)
+        for (int j = 0; j < matrix.cols; j++)
+            NumOut(30 * j, 63 - (8 * i), MatrixGet(matrix, i - 1, j), false);
+    if (pauseSecs > 0)
+        Wait(1000 * pauseSecs);
+}
+
+inline bool checkMultiplyOverflow(long a, long b)
+{
+     while (a > 0) {a <<= 1; b >>= 1;}
+     if (b) /* overflow */
+         return true;
+     return false;
+}
+
+/**
+ * \brief Finds the inverse of a matrix. The inverted matix is scalled by
+ * the returned scale factor. The given precision is the amount of desired
+ * scale factor within which all element values are fitted.
+ *
+ * The returned inverse matrix is scaled by a factor value return by the
+ * function to fit all integer values in the matrix within the precision
+ * provided. That is, if the precision provided is 1000, it will produce
+ * an inverse matrix with all it's elements' absolute values within 0 to
+ * 1000.
+ *
+ * Use the returned 'scale' value to scale down the matrix
+ * at later appropriate time. This is done because inverse of integer matrix
+ * is always less than 1 and we need to maintain the level of precision for
+ * the inverse matrix to be meaningful. It's a cheap form of maintaining
+ * floating point numbers in integer matrix. Unlike other functions, it takes
+ * matrix as value (instead of reference), because it needs to modify it
+ * without affecting the original one. As a consequence, retInverse can be the
+ * same variable as input matrix.
+ */
+long MatrixInverse (Matrix matrix, long precision, Matrix &retInverse)
+{
+     ASSERT(matrix.rows > 0, "Matrix invalid size");
+     ASSERT(precision > 0, "Invalid precision");
+
+     /**
+      * Implementation detail:
+      * To avoid blowing up the matrix with integer overflow, the input
+      * matrix has to be scaled down depending on the size of the matrix
+      * The determinant of the matrix has maximum order of N times the order
+      * of it's largest element. So for example, if the largest item in
+      * a 4x4 matrix is 1000, the max determinant value will take,
+      * 1000,000,000,000 -- Not an easy number to fit in a 32 bit integer :).
+      *
+      * To tame the matrix down, we scale the input matix and limit the
+      * largest element to 2^(31/N) - 1. N is the order of the matrix, and the
+      * 31 comes from the fact that 32 bit integer can't hold value larger
+      * than 2^31. So, for 1x1 matrix, input can take full range of 2^31 - 1,
+      * 2x2 can take max 2^15 - 1, and so on.
+      *
+      * Algorithm:
+      * The larget element is first searched and  bit shifted until it falls
+      * in the acceptable dynamic range of that matrix. This amount of bit
+      * shifts is performed on all elements. Some smaller elements will
+      * fall off to 0 after the shift, but there is nothing we can do about
+      * that.
+      *
+      * Then, to neutralize the input shifts, after the adjugate is computed,
+      * either the determinanat needs to be multiplied by 2^S or (adjugate)
+      * matrix elements need to be divided by 2^S, where S is the number of
+      * bits we shifted before.
+      *
+      * We can't do the first, because we will lose all the precision in
+      * elements. We can'd do the later either because that will overflow
+      * determinant (remember, we scaled down the input in first place to
+      * avoid this very problem).
+      *
+      * So what we do is increse the scale factor of the matrix (the value
+      * that will be returned, which is initially set to the provided desired
+      * precision factor) by this amount. It is quite likely that we can't scale
+      * it (by right shifting it) beyond some limit without overflowing.
+      * That's when the residual scale (the remaining shiftings) is used
+      * to scale down (left shift) the matrix elements. We lose precision, but
+      * this is the last place we can scale).
+      */
+     long retScale = precision;
+     
+     /* Determine dynamic range of the input matrix */
+     long maxima = MatrixMaxima(matrix);
+     long dynamicRange = 1;
+     dynamicRange <<= (31/matrix.rows);
+     dynamicRange--;   /* 2^(31/N) - 1 */
+
+     /* Reduce the input to fit in above dynamic range */
+     int shiftCount = 0;
+     while (maxima > dynamicRange) { maxima >>= 1; shiftCount++; }
+     MatrixShiftRight(matrix, shiftCount);
+
+     /* Find matrix adjugate and determinant for computing inverse. */
+     MatrixAdjugate(matrix, retInverse);
+     long det = MatrixDeterminant(matrix);
+     
+     /* Neutralize the dynamic range adjustments: First try increasing
+      * scale factor as much as it can hold and then the rest in the matrix.
+      * We shift the precision right
+      * (effectively, dividing it by 2 each time) until it is 1 and at
+      * the same time decrease shiftCount for residual factor.
+      */
+     while (retScale >= 0 && shiftCount > 0)
+         { retScale <<= 1; shiftCount--; }
+     if (retScale < 0) { shiftCount++; retScale >>= 1; }
+     if (shiftCount > 0) MatrixShiftRight(retInverse, shiftCount);
+     
+     /* Find the largest integer in matrix. */
+     maxima = MatrixMaxima(retInverse);
+     
+     if (checkMultiplyOverflow(maxima, precision))
+         det /= precision; /* Overflow detected: Apply the scale on det */
+     else
+         MatrixScale(retInverse, precision); /* No overflow */
+     MatrixReduce(retInverse, det);
+     return retScale;
+}
+
+/* Tests */
+
+#ifdef ENABLE_TEST
+
+int elementsA[] = {
+-3,  2, -5,
+-1,  0, -2,
+ 3, -4,  1,
+};
+
+int elementsA1[] = {
+-3,
+};
+
+int elementsA2[] = {
+-3,  2,
+-1,  4,
+};
+
+int elementsA3[] = {
+-2, 2, -3,
+-1, 1,  3,
+ 2, 0, -1,
+};
+
+int elementsA4[] = {
+ 2,  5, 1, -3,
+-2, -3, 2,  6,
+ 1,  0, 2,  1,
+ 0,  2, 2,  1,
+};
+
+int elementsA5[] = {
+1,  2,  3, 4,  5,
+2, -1,  0, 3,  0,
+2,  1,  4, 2,  2,
+0,  3, -1, 5,  1,
+6,  0,  7, 3,  1
+};
+
+int elementsB[] = {
+ 4,  1, -6,
+-1, -3,  1,
+-3,  2,  2,
+};
+
+int elementsC[] = {
+ 1, 0, 2,
+-1, 3, 1,
+};
+
+int elementsD[] = {
+3, 1,
+2, 1,
+1, 0,
+};
+
+int r_elementsA_trans[] = {
+-3, -1,  3,
+ 2,  0, -4,
+-5, -2,  1,
+};
+
+int r_elementsAB_add[] = {
+ 1,  3, -11,
+-2, -3,  -1,
+ 0, -2,   3,
+};
+
+int r_elementsAB_sub[] = {
+-7,  1,  1,
+ 0,  3, -3,
+ 6, -6, -1,
+};
+
+int r_elementsA_scale5[] = {
+-15,  10, -25,
+ -5,   0, -10,
+ 15, -20,   5,
+};
+
+int r_elementsCD_multi[] = {
+5, 1,
+4, 2,
+};
+
+int r_elementsA_minor00[] = {
+ 0, -2,
+-4,  1,
+};
+
+int r_elementsA_minor11[] = {
+-3, -5,
+ 3,  1,
+};
+
+int r_elementsA_adj[] = {
+-8,  18, -4,
+-5,  12, -1,
+ 4,  -6,  2,
+};
+
+int r_elementsA3_inv[] = {
+ -55,   111, 500,
+ 277,   444, 500,
+-111,   222,   0,
+};
+
+int r_elementsA4_adj[] = {
+-20, -14, -5, 29,
+-10, -7, 6, 6,
+19, 15, -8, -25,
+-18, -16, 4, 21,
+};
+
+int r_elementsA5_adj[] = {
+118, -102, -392, 18, 176,
+44, -120, -184, 54, 94,
+-88, 54, 275, -15, -95,
+-64, 90, 200, 6, -86,
+100, -36, -173, -21, 53,
+};
+
+/**
+ * \brief Uint tests for the matrix implementation. Use for development only.
+ */
+void TestMatrix()
+{
+    Matrix A, A1, A2, A3, A4, A5, B, C, D, R, E, T;
+    MatrixInitElements(A,  3, 3, elementsA);
+    MatrixInitElements(A1, 1, 1, elementsA1);
+    MatrixInitElements(A2, 2, 2, elementsA2);
+    MatrixInitElements(A3, 3, 3, elementsA3);
+    MatrixInitElements(A4, 4, 4, elementsA4);
+    MatrixInitElements(A5, 5, 5, elementsA5);
+    MatrixInitElements(B,  3, 3, elementsB);
+    MatrixInitElements(C,  2, 3, elementsC);
+    MatrixInitElements(D,  3, 2, elementsD);
+
+    /* Test Transpose */
+    MatrixTranspose(A);
+    MatrixInitElements(E, 3, 3, r_elementsA_trans);
+    TEST(MatrixCompare(E, A), "Matrix Transpose");
+    //MatrixPrint(A);
+    MatrixTranspose(A);
+
+    /* Test Addition */
+    R = A;
+    MatrixAdd(R, B);
+    MatrixInitElements(E, 3, 3, r_elementsAB_add);
+    TEST(MatrixCompare(E, R), "Matrix Addition");
+    //MatrixPrint(R);
+
+    /* Test Subtraction */
+    R = A;
+    MatrixSubtract(R, B);
+    MatrixInitElements(E, 3, 3, r_elementsAB_sub);
+    TEST(MatrixCompare(E, R), "Matrix Subtraction");
+    //MatrixPrint(R);
+
+    /* Test Scaling */
+    R = A;
+    MatrixScale(R, 5);
+    MatrixInitElements(E, 3, 3, r_elementsA_scale5);
+    TEST(MatrixCompare(E, R), "Matrix Scaling");
+    //MatrixPrint(R);
+
+    /* Test Reduce */
+    MatrixReduce(R, 5);
+    TEST(MatrixCompare(A, R), "Matrix Reduction");
+    //MatrixPrint(R);
+
+    /* Test Multiply */
+    MatrixMultiply(C, D, R);
+    MatrixInitElements(E, 2, 2, r_elementsCD_multi);
+    TEST(MatrixCompare(E, R), "Matrix Multiply");
+    //MatrixPrint(R);
+
+    /* Test Minor A(0,0) */
+    MatrixMinor(A, 0, 0, R);
+    MatrixInitElements(E, 2, 2, r_elementsA_minor00);
+    TEST(MatrixCompare(E, R), "Matrix Minor 00");
+    //MatrixPrint(R);
+
+    /* Test Minor A(1,1) */
+    MatrixMinor(A, 1, 1, R);
+    MatrixInitElements(E, 2, 2, r_elementsA_minor11);
+    TEST(MatrixCompare(E, R), "Matrix Minor 11");
+    //MatrixPrint(R);
+
+    /* Test Determinants */
+    TEST((MatrixDeterminant(A1) == -3), "Matrix determinant");
+    TEST((MatrixDeterminant(A2) == -10), "Matrix determinant");
+    TEST((MatrixDeterminant(A3) == 18), "Matrix determinant");
+
+    /* Test Cofactor (i,j) */
+    TEST((MatrixCofactorIJ(A, 0, 0) == -8), "Matrix Cofac 00");
+    TEST((MatrixCofactorIJ(A, 0, 1) == -5), "Matrix Cofac 01");
+    TEST((MatrixCofactorIJ(A, 0, 2) ==  4), "Matrix Cofac 02");
+
+    /* Test C(ij), Cofactor and Adjugate */
+    MatrixAdjugate(A, R);
+    MatrixInitElements(E, 3, 3, r_elementsA_adj);
+    TEST(MatrixCompare(E, R), "Matrix Adjugate");
+    //MatrixPrint(R);
+
+    /* Test Inverse */
+    long scale = MatrixInverse(A3, 1000, R);
+    MatrixInitElements(E, 3, 3, r_elementsA3_inv);
+    TEST(MatrixCompare(E, R), "Matrix Inverse");
+    //MatrixPrint(R, "A3 Inv = ", 5);
+
+#if 0
+    MatrixAdjugate(A4, R);
+    MatrixInitElements(E, 4, 4, r_elementsA4_adj);
+    TEST(MatrixCompare(E, R), "Matrix Adjugate");
+    //MatrixPrint(R);
+
+    MatrixAdjugate(A5, R);
+    MatrixInitElements(E, 5, 5, r_elementsA5_adj);
+    TEST(MatrixCompare(E, R), "Matrix Adjugate");
+    //MatrixPrint(R);
+
+    int tick1 = CurrentTick();
+    for (int i = 0; i < 1; i++)
+    {
+        MatrixAdjugate(A, R);
+    }
+    int tick2 = CurrentTick();
+    NumOut(0, LCD_LINE1, (tick2 - tick1), true);
+    //MatrixPrint(R);
+#endif
+
+    TextOut(0, LCD_LINE1, "Matrix passed");
+}
+#endif /* ENABLE_TEST */
+#endif /* _MATRIX_H_ */
+

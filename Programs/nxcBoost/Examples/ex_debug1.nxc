@@ -1,0 +1,69 @@
+// include the library
+#include "debug-console.nxc"
+
+// This are our debug classes
+// you can see they belong to different
+// code
+#define CLASS_MAIN  0
+#define CLASS_INIT  1
+#define CLASS_MOTOR 2
+#define CLASS_COM   3
+
+// This are the debug flags
+// Set one flag true if you
+// want debug messages from this class
+#define DEBUG_FULL  TRUE
+#define DEBUG_INIT  FALSE
+#define DEBUG_MOTOR FALSE
+#define DEBUG_COM   FALSE
+
+
+// Ex 1.
+// simple
+// show debug messages with a debug console
+task main()
+{
+   // we have 3 own classes
+   // note that CLASS_MAIN is always included!
+   initClass(3);
+
+   // now we need a console to show our debug msg
+   initConsole();
+   // this is necessarily because we us ohter standard
+   // parameter for our debug messages (wait time..)
+   initConsoleDebug();
+
+   // set the time to wait after msg output
+   setConsoleDebugTime(SEC_1);
+
+   // give the class system the flags
+   setClassFlag(CLASS_MAIN,  DEBUG_FULL);
+   setClassFlag(CLASS_INIT,  DEBUG_INIT);
+   setClassFlag(CLASS_MOTOR, DEBUG_MOTOR);
+   setClassFlag(CLASS_COM,   DEBUG_COM);
+
+   // independent from debug flags
+   // but it uses the debug standard parameter
+   coutDebug("Main Message");
+
+   // now play around with the flags (true/false)
+   // and see which messages are printed in the console
+   coutDebug("Class Init",  CLASS_INIT);
+   coutDebug("Class Motor", CLASS_MOTOR);
+   coutDebug("Class Com",   CLASS_COM);
+
+   // we can use functions from console also
+   // since debug-console "inherits" from console
+   cout("");
+   cout("Wait Button..");
+   until( kbhit() );
+}
+
+// If you want to make a version of your program without debugging:
+// Go to nxcBoost->debug-console.nxc and turn
+// #define DEBUG_CONSOLE into a comment line
+// Same for class.nxc
+// Try it and look how much memory the program needs with and without debugging
+// With debugging -> 3952  without -> 2876
+
+

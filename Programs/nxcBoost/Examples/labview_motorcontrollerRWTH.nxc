@@ -1,0 +1,58 @@
+
+
+#include "motorcontrollerRWTH.nxc"
+
+task main()
+{
+    /* NO_TASK_SUPPORT
+   Wait(1000);
+   resetErrorCorrection(OUT_ABC);
+   Wait(1000);
+   moveRel(OUT_A, 100, 90, true, true, false);
+   Wait(1000);
+   moveRel(OUT_A, -100, 90, true, true, false);
+   */
+
+   initCom();
+   setComPollingTime(100);
+   //initConsole(2);
+
+   start Motor_Controller_Task;
+   Wait(10);
+   resetErrorCorrection(OUT_ABC);
+   Wait(1000);
+
+   while(true) {
+      string para_raw;
+      bool ret;
+      ret = receiveString(para_raw, 0, SEC_10*10);
+      if(!ret) {
+         // cout("com error", SEC_5);
+         Stop(true);
+      }
+      // cout("para_raw:", SEC_1);
+      // cout(para_raw, SEC_2);
+
+      string para[];
+      tokenize(para_raw, "-", para);
+
+      int power0     =  StrToNum(para[0]);
+      int speedreg0  =  StrToNum(para[1]);
+      int holdbreak0 =  StrToNum(para[2]);
+      int target0    =  StrToNum(para[3]);
+
+      // cout("go");
+      send("go");
+      start0 = true;
+      moveRel(OUT_A, power0, target0, speedreg0, holdbreak0, false, false);
+      Wait(200);
+      //emergencyStop(false);
+      Wait(100);
+      start0 = false;
+      send("stop");
+      // cout("stop");
+      PlayTone(TONE_C4,100); Wait(100);
+      moveRel(OUT_A, -100, 90, true, true, false);
+   }
+   Wait(5000);
+}

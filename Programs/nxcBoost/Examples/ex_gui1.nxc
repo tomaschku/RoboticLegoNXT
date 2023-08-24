@@ -1,0 +1,61 @@
+
+#include "gui.nxc"
+
+// Example GUI 1
+task main()
+{
+   // variables will save our objects
+   int pb1, pb2;
+   int mark1, mark2;
+   int numInd1, strInd1;
+   int led1;
+   
+   // Create Objects..
+   ///////////////x///y//h///w//min/max//mode///////////objId/
+   newProgressBar(75, 5, 16, 50, 0, 100, PROGRESS_BAR_V, pb1);
+   ///////parent//scale//ratio//objId/
+   newMarker(pb1, 10, 5, mark1);
+   newProgressBar(5, 40, 50, 16, 0, 100, PROGRESS_BAR_H, pb2);
+   newMarker(pb2, 10, 5, mark2);
+   ////////////////x//y//name////objId/////
+   newNumIndicator(1, 5, "State:", numInd1);
+   //////////////////////////////////////////////
+   newLed(60, 7, 6, led1);
+   /////////////////////////////////////
+   newStrIndicator(1, 18, "Data:", strInd1);
+
+   // show objects on LCD
+   objectShow(pb1);
+   objectShow(pb2);
+   objectShow(mark1);
+   objectShow(mark2);
+   objectShow(numInd1);
+   objectShow(led1);
+   objectShow(strInd1);
+
+   // do some stuff with objects
+   StrIndicatorSet(strInd1, "Ready");
+   Wait(1000);
+
+   for(int i; i<10; i++) {
+      ProgressBarAdd(pb1, 10);
+      NumIndicatorSet(numInd1, 10*i+10);
+      ProgressBarAdd(pb2, 10);
+      LedInvert(led1);
+      Wait(500);
+   }
+   StrIndicatorSet(strInd1, "Done");
+   Wait(2000);
+   StrIndicatorSet(strInd1, "Delete");
+   
+   // delte objects
+   // not necessary in this example..
+   deleteObject(pb1);
+   deleteObject(pb2);
+   deleteObject(mark1);
+   deleteObject(mark2);
+   deleteObject(numInd1);
+   deleteObject(led1);
+   deleteObject(strInd1);
+   Wait(1500);
+}

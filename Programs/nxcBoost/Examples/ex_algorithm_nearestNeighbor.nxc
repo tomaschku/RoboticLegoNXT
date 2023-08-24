@@ -1,0 +1,24 @@
+
+
+// Ex nearestNeighbor
+// find the value which is nearest to your value x
+task main()
+{
+   initConsole();
+
+   int test[] = {0, 100, 200, 300, 400, 500};
+
+   int x = 240;
+   int distance;
+   int neighbor = nearestNeighbor(test, x, distance);
+
+   cout("nearest neighbor pos:");
+   coutNum(neighbor);
+   cout("neighbor number:");
+   coutNum(test[ neighbor ]);
+   cout("distance:");
+   coutNum(distance);
+
+   until( kbhit() );
+
+}
