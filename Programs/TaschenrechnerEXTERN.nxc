@@ -1,0 +1,102 @@
+//Create Variables
+int first_num, sec_num, operator_num, result, stopwhile;
+string operator;
+int current_step;
+
+task main() {
+//Set Variables to a default value, so they don't make an error, when only skipping
+first_num=1;
+sec_num=1;
+result=0;
+stopwhile=0;
+operator_num=1;
+current_step=1;
+
+//Initialize the Sensors
+SetSensorTouch(IN_1);
+SetSensorTouch(IN_2);
+SetSensorTouch(IN_3);
+
+while(stopwhile==0) {//START WHILE-LOOP-----------------------------------------
+  ClearScreen();
+  TextOut(0, LCD_LINE5, NumToStr(first_num) + " " + operator + " " + NumToStr(sec_num));
+
+  Wait(200); //Wait to slow down the dereasing/increasing of the number(s)
+  //Check if "Add 1" is pressed
+
+  //Edit the first number ------------------------------------------------------
+  if(current_step == 1) {
+    if(Sensor(IN_1) == 1) {
+      first_num=first_num+1;
+    };
+    
+    //Check if "Minus 1" is pressed
+    if(Sensor(IN_2) == 1) {
+      first_num=first_num-1;
+    };
+    
+    //Set Step to 2 if "Next" is pressed
+    if(Sensor(IN_3) == 1) {
+      current_step=2;
+    };
+  };
+  
+  //Edit the operator ----------------------------------------------------------
+  if(current_step == 2) {
+    //"Inctrease" operator if "add" is pressed
+    if(Sensor(IN_1) == 1) {
+      if(operator_num > 4) {operator_num=1;};
+      operator_num=operator_num+1;
+    };
+    
+    //"Decrease" operator if "substract" is pressed
+    if(Sensor(IN_2) == 1) {
+      if(operator_num < 1) {operator_num=4;};
+      operator_num=operator_num-1;
+    };
+
+    if(operator_num == 1) {operator="+";};
+    if(operator_num == 2) {operator="-";};
+    if(operator_num == 3) {operator="*";};
+    if(operator_num == 4) {operator="/";};
+
+    //Set Step to 3 if "Next" is pressed
+    if(Sensor(IN_3) == 1) {
+      current_step=3;
+    };
+  };
+  
+  //Edit the second number -----------------------------------------------------
+  if(current_step == 3) {
+    if(Sensor(IN_1) == 1) {
+      sec_num=sec_num+1;
+    };
+
+    //Check if "Minus 1" is pressed
+    if(Sensor(IN_2) == 1) {
+      sec_num=sec_num-1;
+    };
+
+    //Set Step to 4 if "Next" is pressed
+    if(Sensor(IN_3) == 1) {
+      current_step=4;
+    };
+  };
+  
+  //STOP WHILE
+  if(current_step == 4) {
+    stopwhile=1;
+  };
+  
+};//END WHILE-LOOP--------------------------------------------------------------
+
+//Calculate result
+if(operator_num == 1) {result=first_num + sec_num;}
+if(operator_num == 2) {result=first_num - sec_num;}
+if(operator_num == 3) {result=first_num * sec_num;}
+if(operator_num == 4) {result=first_num / sec_num;}
+
+//Output result
+ClearScreen();
+TextOut(0, LCD_LINE3, "Das Ergebnis ist " + NumToStr(first_num));
+}

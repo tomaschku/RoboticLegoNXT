@@ -31,9 +31,9 @@
             this.components = new System.ComponentModel.Container();
             this.drawBox = new System.Windows.Forms.PictureBox();
             this.MenuStrip = new System.Windows.Forms.MenuStrip();
-            this.Menu_Datei = new System.Windows.Forms.ToolStripMenuItem();
-            this.Menu_ÖffneScan = new System.Windows.Forms.ToolStripMenuItem();
-            this.Menu_SpeichereBild = new System.Windows.Forms.ToolStripMenuItem();
+            this.Menu_File = new System.Windows.Forms.ToolStripMenuItem();
+            this.Menu_OpenScan = new System.Windows.Forms.ToolStripMenuItem();
+            this.Menu_SaveImage = new System.Windows.Forms.ToolStripMenuItem();
             this.Tools_Panel = new System.Windows.Forms.Panel();
             this.Num_Change = new System.Windows.Forms.NumericUpDown();
             this.Num_Max = new System.Windows.Forms.NumericUpDown();
@@ -63,34 +63,34 @@
             // MenuStrip
             // 
             this.MenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.Menu_Datei});
+            this.Menu_File});
             this.MenuStrip.Location = new System.Drawing.Point(0, 0);
             this.MenuStrip.Name = "MenuStrip";
             this.MenuStrip.Size = new System.Drawing.Size(459, 24);
             this.MenuStrip.TabIndex = 1;
             // 
-            // Menu_Datei
+            // Menu_File
             // 
-            this.Menu_Datei.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.Menu_ÖffneScan,
-            this.Menu_SpeichereBild});
-            this.Menu_Datei.Name = "Menu_Datei";
-            this.Menu_Datei.Size = new System.Drawing.Size(46, 20);
-            this.Menu_Datei.Text = "Datei";
+            this.Menu_File.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.Menu_OpenScan,
+            this.Menu_SaveImage});
+            this.Menu_File.Name = "Menu_File";
+            this.Menu_File.Size = new System.Drawing.Size(46, 20);
+            this.Menu_File.Text = "File";
             // 
-            // Menu_ÖffneScan
+            // Menu_OpenScan
             // 
-            this.Menu_ÖffneScan.Name = "Menu_ÖffneScan";
-            this.Menu_ÖffneScan.Size = new System.Drawing.Size(174, 22);
-            this.Menu_ÖffneScan.Text = "Öffne Scan...";
-            this.Menu_ÖffneScan.Click += new System.EventHandler(this.Menu_ÖffneScan_Click);
+            this.Menu_OpenScan.Name = "Menu_OpenScan";
+            this.Menu_OpenScan.Size = new System.Drawing.Size(174, 22);
+            this.Menu_OpenScan.Text = "Open scan...";
+            this.Menu_OpenScan.Click += new System.EventHandler(this.Menu_OpenScan_Click);
             // 
-            // Menu_SpeichereBild
+            // Menu_SaveImage
             // 
-            this.Menu_SpeichereBild.Name = "Menu_SpeichereBild";
-            this.Menu_SpeichereBild.Size = new System.Drawing.Size(180, 22);
-            this.Menu_SpeichereBild.Text = "Speichere als Bild...";
-            this.Menu_SpeichereBild.Click += new System.EventHandler(this.Menu_SpeichereBild_Click);
+            this.Menu_SaveImage.Name = "Menu_SaveImage";
+            this.Menu_SaveImage.Size = new System.Drawing.Size(180, 22);
+            this.Menu_SaveImage.Text = "Save as image...";
+            this.Menu_SaveImage.Click += new System.EventHandler(this.Menu_SaveImage_Click);
             // 
             // Tools_Panel
             // 
@@ -121,7 +121,7 @@
             this.Num_Change.Name = "Num_Change";
             this.Num_Change.Size = new System.Drawing.Size(61, 26);
             this.Num_Change.TabIndex = 2;
-            this.ToolTip.SetToolTip(this.Num_Change, "Aufhellen/Abdunkeln der Werte");
+            this.ToolTip.SetToolTip(this.Num_Change, "Increase/Decrease brightness of values");
             this.Num_Change.ValueChanged += new System.EventHandler(this.Num_Change_Changed);
             // 
             // Num_Max
@@ -136,7 +136,7 @@
             this.Num_Max.Name = "Num_Max";
             this.Num_Max.Size = new System.Drawing.Size(61, 26);
             this.Num_Max.TabIndex = 1;
-            this.ToolTip.SetToolTip(this.Num_Max, "Hellste Stelle (Größter Wert)\r\nSTRG drücken, um andere Zahl zu überschreiben.");
+            this.ToolTip.SetToolTip(this.Num_Max, "Brightest spot (highest value)\r\nPress CTRL to overwrite other number.");
             this.Num_Max.Value = new decimal(new int[] {
             255,
             0,
@@ -157,7 +157,7 @@
             this.Num_Min.Name = "Num_Min";
             this.Num_Min.Size = new System.Drawing.Size(61, 26);
             this.Num_Min.TabIndex = 0;
-            this.ToolTip.SetToolTip(this.Num_Min, "Dunkelste Stelle (Kleinster Wert)\r\nSTRG drücken, um andere Zahl zu überschreiben." +
+            this.ToolTip.SetToolTip(this.Num_Min, "Darkest spot (smallest value)\r\nPress CTRL to overwrite other number." +
         "");
             this.Num_Min.ValueChanged += new System.EventHandler(this.Num_Limits_Changed);
             this.Num_Min.Scroll += new System.Windows.Forms.ScrollEventHandler(this.Num_Scrolled);
@@ -198,9 +198,9 @@
 
         private System.Windows.Forms.PictureBox drawBox;
         private System.Windows.Forms.MenuStrip MenuStrip;
-        private System.Windows.Forms.ToolStripMenuItem Menu_Datei;
-        private System.Windows.Forms.ToolStripMenuItem Menu_ÖffneScan;
-        private System.Windows.Forms.ToolStripMenuItem Menu_SpeichereBild;
+        private System.Windows.Forms.ToolStripMenuItem Menu_File;
+        private System.Windows.Forms.ToolStripMenuItem Menu_OpenScan;
+        private System.Windows.Forms.ToolStripMenuItem Menu_SaveImage;
         private System.Windows.Forms.Panel Tools_Panel;
         private System.Windows.Forms.NumericUpDown Num_Max;
         private System.Windows.Forms.NumericUpDown Num_Min;

@@ -3,15 +3,147 @@
 #include "../EasyCoding/MoreStrings.nxc"
 #include "../EasyCoding/Bluetooth.nxc"
 
+#define LCD_WIDTH DISPLAY_WIDTH //100
+#define LCD_HEIGHT DISPLAY_HEIGHT //64
 #define CHAR_HEIGHT 8
 #define CHAR_WIDTH 5
 #define CHARS_PER_ROW 16
 #define CHARS_PER_COLUMN 8
 
-long map(long num, long in_min, long in_max, long out_min, long out_max)
-{
-  return (num - in_min) * (out_max - out_min + 1) / (in_max - in_min + 1) + out_min;
+bool ScreenOut(string txt[]); //Prototype for ERR function
+void pause(int BTN = BTNCENTER, int check_delay = 10); //-"-
+int min(int a, int b);
+int max(int a, int b);
+
+int ERR = 0;
+
+/*******************************************************
+ *     NOTE: When editing Values, always call the      *
+ * Correcture-Functions, so that all Values are legal. *
+ *Also, the in C++ standardized :: operator is (because*
+ *  of the limitations of NXC) replaced with _. This   *
+ * operator is also used for all other structs in this *
+ *                        file.                        *
+ *******************************************************
+ */
+
+//RECTANGLE
+struct Rect {//From the Left-Top Corner
+ int X;
+ int Y;
+ int X2;
+ int Y2;
+ int width;
+ int height;
 };
+  //Correcture-Functions (Changes affect input)
+void Rect_X(Rect &in)      { in.X = in.X2 - in.width;  };
+void Rect_Y(Rect &in)      { in.Y = in.Y2 - in.height; };
+void Rect_X2(Rect &in)     { in.X2 = in.X + in.width;  };
+void Rect_Y2(Rect &in)     { in.Y2 = in.Y + in.height; };
+void Rect_width(Rect &in)  { in.width = in.X2 - in.X;  };
+void Rect_height(Rect &in) { in.height = in.Y2 - in.Y; };
+  //Initiators
+void Rect_RInit(Rect &in, int X, int Y, int width, int height) {
+ //Relative Init
+ in.X = X;
+ in.Y = Y;
+ in.width = width;
+ in.height = height;
+ Rect_X2(in);
+ Rect_Y2(in);
+};
+void Rect_AInit(Rect &in, int X, int Y, int X2, int Y2) {
+ //Absolute Init
+ in.X = X;
+ in.Y = Y;
+ in.X2 = X2;
+ in.Y2 = Y2;
+ Rect_width(in);
+ Rect_height(in);
+};
+  //Special Functions
+bool Rect_RMove(Rect &in, int XMOV, int YMOV) {
+ //Relative Move
+ if(XMOV > 100 || XMOV < -100 || YMOV > 64 || YMOV < -64) { ERR = 100; return false; };
+ int Nextx = in.X + XMOV;
+ if(Nextx > 100 || Nextx < -100) { ERR = 101; return false; };
+ int Nexty = in.Y + YMOV;
+ if(Nexty > 60 || Nexty < -60) { ERR = 102; return false; };
+
+ in.X = Nextx;
+ Rect_X2(in);
+ 
+ in.Y = Nexty;
+ Rect_Y2(in);
+ return true;
+};
+bool Rect_AMove(Rect &in, int X, int Y) {//Edit: Do not reset values to border(?)
+ //Absolute Move
+ if(X < 0 || Y < 0 || X > DISPLAY_WIDTH || Y > DISPLAY_HEIGHT) { ERR = 110; return false; };
+ in.X = X;
+ Rect_X2(in);
+ if(in.X2 > DISPLAY_WIDTH) { in.X2 = DISPLAY_WIDTH; };
+ in.Y = Y;
+ Rect_Y2(in);
+ if(in.Y2 > DISPLAY_HEIGHT) { in.Y2 = DISPLAY_HEIGHT; };
+ return true;
+};
+bool Rect_RResize(Rect &in, int Nwidth, int Nheight) {
+ //Relative Resize
+ if(Nwidth > DISPLAY_WIDTH - (in.X + in.width) || Nheight > DISPLAY_HEIGHT - (in.Y + in.height)) { ERR = 120; return false; };
+ in.width = Nwidth;
+ in.height = Nheight;
+ Rect_X2(in);
+ Rect_Y2(in);
+ return true;
+};
+bool Rect_AResize(Rect &in, int X2, int Y2) {
+ //Absolute Resize
+ if(X2 < in.X || X2 > DISPLAY_WIDTH || Y2 < in.Y || Y2 > DISPLAY_HEIGHT) { ERR = 130; return false; };
+ in.X2 = X2;
+ in.Y2 = Y2;
+ Rect_width(in);
+ Rect_height(in);
+ return true;
+};
+void Rect_Reset(Rect &in) {
+ in.X = 0;
+ in.Y = 0;
+ in.X2 = 0;
+ in.Y2 = 0;
+ in.width = 0;
+ in.height = 0;
+};
+void Rect_printable(Rect &out, Rect in) {
+ out.Y = 63 - in.Y; //63 = Zero based
+ out.Y2 = 63 - in.Y2;
+};
+void Rect_print(Rect in, bool prepared) {
+ Rect ToPrint;
+ if(!prepared) {
+  Rect_printable(ToPrint, in);
+ };
+ 
+ RectOut(ToPrint.X, ToPrint.Y, ToPrint.width, ToPrint.height);
+};
+/*bool Rect_overlap(Rect rA, Rect rB) {
+ if (rA.X1 < rB.X2 && rA.X2 > rB.X1 && rA.Y1 > rB.Y2 && rA.Y2 < rB.Y1) {
+  return true;
+ } else {
+  return false;
+ };
+};*/
+/*char Rect_poverlap(Rect rA, Rect rB) {//percent
+ int Area_Overlap = 0;
+ Rect Overlap;
+ Rect_AInit(Overlap, max(rA.X, rB.X), max(rA.Y, rB.Y), min(rA.X2, rB.X2), min(rA.Y2, rB.Y2));
+ if (left >= right && bottom <= top) { return 0; };
+ 
+};*/
+//__________END RECTANGLE__________
+//____________MISC_____________
+long map(long x, long in_min, long in_max, long out_min, long out_max); //Prototype for rnd()
 
 long rnd(long min, long max)
 {
@@ -21,6 +153,10 @@ long rnd(long min, long max)
 bool between(long min, long max, long num)
 {
   return (num < min && num > max);
+};
+
+long map(long num, long in_min, long in_max, long out_min, long out_max) {
+  return (num - in_min) * (out_max - out_min + 1) / (in_max - in_min + 1) + out_min;
 };
 
 long limit(long min, long max, long num)
@@ -76,26 +212,6 @@ void CenterTextOut(int y, string txt, unsigned long options = DRAW_OPT_NORMAL) {
   TextOut((DISPLAY_WIDTH-StrLen(txt)*CHAR_WIDTH)/2-5, y, txt, options);
 };
 
-long GetNumber(string msg, long min, long max, int switching_time = 100) {//Inclusive
-  int value = (max+min)/2; //Use the middle at the start
- 
-  while(!BTNPRESSED(BTNCENTER)) {
-    CenterTextOut(LCD_LINE4, msg);
-    CenterTextOut(LCD_LINE5, NumToStr(value));
-    
-    if(BTNPRESSED(BTNRIGHT)) { value++; };
-    
-    if(BTNPRESSED(BTNLEFT)) {  value--; };
-    
-    if (min > value) { value = max; };
-    if (value > max) { value = min; };
-    Wait(switching_time);
-  };
-   
-  while(BTNPRESSED(BTNCENTER)) { Wait(10); }; //No accidental press after function
-  return value;
-};
-
 string CenterText(string txt) {
   if(StrLen(txt) == 0) { return ""; };
   string str = "";
@@ -109,10 +225,10 @@ string CenterText(string txt) {
 void RightTextOut(int y, string txt, unsigned long options = DRAW_OPT_NORMAL) {
   TextOut(DISPLAY_WIDTH-(StrLen(txt)*CHAR_WIDTH+5), y, txt, options);
 };
+
 string RightText(string txt) {
   if(StrLen(txt) == 0) { return ""; };
   string str = "";
-  
   for(int i = 0; i <= (DISPLAY_WIDTH-(StrLen(txt)*5+5/CHAR_WIDTH)); i++) {
 	  str = str + " ";
   };
@@ -120,10 +236,174 @@ string RightText(string txt) {
   return str + txt;
 };
 
+bool ScreenOut(string txt[]){
+ if(ArrayLen(txt) != 8) { ERR = 6; return false; };
+ for(int i = 0; i < 8; i++) {
+  if(StrLen(txt[i]) > 16) { ERR = 7; return false; };
+ };
+ TextOut(0, LCD_LINE1, txt[0]);
+ TextOut(0, LCD_LINE2, txt[1]);
+ TextOut(0, LCD_LINE3, txt[2]);
+ TextOut(0, LCD_LINE4, txt[3]);
+ TextOut(0, LCD_LINE5, txt[4]);
+ TextOut(0, LCD_LINE6, txt[5]);
+ TextOut(0, LCD_LINE7, txt[6]);
+ TextOut(0, LCD_LINE8, txt[7]);
+ return true;
+};
+
+bool str_isEmpty(string str)
+{
+ if(StrLen(str) == 0) { return true; } else { return false; };
+};
+
+int str_find_first_not(string str, char sym)
+{
+ if(str_isEmpty(str)) { return 0; };
+ int pos = 0;
+ char s_sym[];
+ s_sym[0] = sym;
+ 
+ for(int i = 0; i < StrLen(str); i++) {
+  if(SubStr(str, i, 1) == s_sym) { pos = i; } else { break; };
+ }
+ 
+ return pos;
+};
+
+int str_find_last_not(string str, char sym)
+{
+ if(str_isEmpty(str)) { return 0; };
+ int pos = 0;
+ char s_sym[];
+ s_sym[0] = sym;
+ 
+ for(int i = StrLen(str); i >= 0; i--) {
+  if(SubStr(str, i, 1) == s_sym) { pos = i; } else { break; };
+ }
+ 
+ return pos;
+};
+
+string str_trim(string str)
+{
+ if(str_isEmpty(str)) { return ""; };
+ string new = "";
+ 
+ int startpos = str_find_first_not(str, " ");
+ int endpos = str_find_last_not(str, " ");
+ new = SubStr(str, startpos, endpos-startpos+1 );
+
+ return new;
+};
+
+int GetNumber(string msg, int min, int max, int switching_time = 100) {//Inclusive
+ int value = (max+min)/2;
+
+ while(!BTNPRESSED(BTNCENTER)) {
+  CenterTextOut(LCD_LINE4, msg);
+  CenterTextOut(LCD_LINE5, NumToStr(value));
+  
+  while(BTNPRESSED(BTNRIGHT)) {
+   value++;
+   Wait(switching_time);
+  };
+  
+  while(BTNPRESSED(BTNLEFT)) {
+   value--;
+   Wait(switching_time);
+  };
+  
+  if (min > value) value = max;
+  if (value > max) value = min;
+ };
+  
+ while(BTNPRESSED(BTNCENTER)) { Wait(10); }; //No accidental press after function
+ return value;
+};
+
 void InvertLine(int y)
 {
   RectOut(0, y, 100, 8, DRAW_OPT_INVERT);
 };
+
+enum Get_Types {
+ BOTH_CASES_SPECIALS = 0,
+ UPPERCASE_ONLY_SPECIALS = 1,
+ DOWNCASE_ONLY_SPECIALS = 2,
+ BOTH_CASESS = 3,
+ UPPERCASE_ONLY = 4,
+ DOWNCASE_ONLY = 5
+};
+
+/*char GetChar(string msg, int cases, int switching_time = 100) {
+ char Alphabet[] = {
+ 'A', 'B', 'C', 'D', 'E',
+ 'F', 'G', 'H', 'I', 'J',
+ 'K', 'L', 'M', 'N', 'O',
+ 'P', 'Q', 'R', 'S', 'T',
+ 'U', 'V', 'W', 'X', 'Y',
+ 'Z'};
+ 
+ char Alphabet_Lowercase[] = {
+ 'a', 'b', 'c', 'd', 'e',
+ 'f', 'g', 'h', 'i', 'j',
+ 'k', 'l', 'm', 'n', 'o',
+ 'p', 'q', 'r', 's', 't',
+ 'u', 'v', 'w', 'x', 'y',
+ 'z'};
+ 
+ char Special[] = {
+ '2', '3', '!',
+ '$', '%', '&', '/', '{',
+ '(', '[', ')', ']', '}',
+ '=', '?', 's', '\\', ' L',
+ '`', '+', '*', '~', '#',
+ '-', '_', '.', ',', ':',
+ ';', '<', '>', '|', '^',
+ '  '
+ };
+
+ char Legal[];
+ 
+ switch(cases) {
+ case BOTH_CASES:
+  ArraySubset(Legal[], Alphabet[], 0, ArrayLen(Alphabet[])-1);
+  ArraySubset(Legal[], Alphabet_Lowercase[], 0, ArrayLen(Alphabet_Lowercase[])-1);
+  break;
+ case UPPERCASE_ONLY:
+  ArraySubset(Legal[], Alphabet[], 0, ArrayLen(Alphabet[])-1);
+  break;
+ case DOWNCASE_ONLY:
+  ArraySubset(Legal[], Alphabet_Lowercase[], 0, ArrayLen(Alphabet[])-1);
+  break;
+ default:
+  return '#';
+  break;
+ };
+
+ int Legal_len = ArrayLen(Legal) - 1;
+ int value = 0;
+ 
+ while(!BTNPRESSED(BTNCENTER)) {
+  cls();
+  CenterTextOut(LCD_LINE4, msg);
+  CenterTextOut(LCD_LINE5, Legal[value]);
+  
+  if(BTNPRESSED(BTNLEFT)) { //A<-B, -1
+   value--;
+  };
+  if(BTNPRESSED(BTNRIGHT)) {//A->B, +1
+   value++;
+  };  
+  
+  if(value < 0) { value = Legal_len; };
+  if(value > Legal_len) { value = 0; };
+ };
+
+ while(BTNPRESSED(BTNCENTER)) { Wait(10); };
+ return Legal[value];
+};*/
 
 unsigned long getProgramRuntime() {
   return CurrentTick() - FirstTick();

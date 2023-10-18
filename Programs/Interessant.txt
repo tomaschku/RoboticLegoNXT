@@ -1,0 +1,6 @@
+http://bricxcc.sourceforge.net/nbc/nxcsamples/index.html
+
+Firmware with NXC Doc Support: http://bricxcc.sourceforge.net/lms_arm_nbcnxc.zip
+(lms_arm_nbcnxc_132.rfw)
+
+http://bricxcc.sourceforge.net/nbc/nxcdoc/nxcapi/_n_b_c_common_8h.html

@@ -1,0 +1,21 @@
+int G;
+int Z;
+
+task main ()
+{
+G=1;
+Z=500;
+
+while(1==1)
+          {
+          NumOut(48, LCD_LINE4, G);
+          OnFwd(OUT_A,G);
+          Wait(Z);
+          G+=1;
+          NumOut(48, LCD_LINE4, G);
+          OnRev(OUT_A,G);
+          Wait(Z);
+          G+=1;
+          Z+=100;
+          }
+}

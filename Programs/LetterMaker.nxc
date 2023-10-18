@@ -1,0 +1,131 @@
+#define BTN1 0
+#define BTN2 1
+#define BTN3 2
+#define BTN4 3
+
+#define BTNEXIT BTN1
+#define BTNRIGHT BTN2
+#define BTNLEFT BTN3
+#define BTNCENTER BTN4
+#define NO_OF_BTNS 4
+
+string letter_in = "";
+string cur_letter = "A";
+string output = "";
+
+//VOID FUNCTION CHANGELETTER(BOOL);
+void changeLetter(bool str_do) {
+ bool string_do = str_do;
+
+ if(string_do) {
+  //"Increase"
+  if(cur_letter == "A"){cur_letter = "B";};
+  if(cur_letter == "B"){cur_letter = "C";};
+  if(cur_letter == "C"){cur_letter = "D";};
+  if(cur_letter == "D"){cur_letter = "E";};
+  if(cur_letter == "E"){cur_letter = "F";};
+  if(cur_letter == "F"){cur_letter = "G";};
+  if(cur_letter == "G"){cur_letter = "H";};
+  if(cur_letter == "H"){cur_letter = "I";};
+  if(cur_letter == "I"){cur_letter = "J";};
+  if(cur_letter == "J"){cur_letter = "K";};
+  if(cur_letter == "K"){cur_letter = "L";};
+  if(cur_letter == "L"){cur_letter = "M";};
+  if(cur_letter == "M"){cur_letter = "N";};
+  if(cur_letter == "N"){cur_letter = "O";};
+  if(cur_letter == "O"){cur_letter = "P";};
+  if(cur_letter == "P"){cur_letter = "Q";};
+  if(cur_letter == "Q"){cur_letter = "R";};
+  if(cur_letter == "R"){cur_letter = "S";};
+  if(cur_letter == "S"){cur_letter = "T";};
+  if(cur_letter == "T"){cur_letter = "U";};
+  if(cur_letter == "U"){cur_letter = "V";};
+  if(cur_letter == "V"){cur_letter = "W";};
+  if(cur_letter == "W"){cur_letter = "X";};
+  if(cur_letter == "X"){cur_letter = "Y";};
+  if(cur_letter == "Y"){cur_letter = "Z";};
+  if(cur_letter == "Z"){cur_letter = " ";};
+  if(cur_letter == " "){cur_letter = "A";};
+ } else {
+  //"Decrease"
+  if(cur_letter == "A"){cur_letter = " ";};
+  if(cur_letter == "B"){cur_letter = "A";};
+  if(cur_letter == "C"){cur_letter = "B";};
+  if(cur_letter == "D"){cur_letter = "C";};
+  if(cur_letter == "E"){cur_letter = "D";};
+  if(cur_letter == "F"){cur_letter = "E";};
+  if(cur_letter == "G"){cur_letter = "F";};
+  if(cur_letter == "H"){cur_letter = "G";};
+  if(cur_letter == "I"){cur_letter = "H";};
+  if(cur_letter == "J"){cur_letter = "I";};
+  if(cur_letter == "K"){cur_letter = "J";};
+  if(cur_letter == "L"){cur_letter = "K";};
+  if(cur_letter == "M"){cur_letter = "L";};
+  if(cur_letter == "N"){cur_letter = "M";};
+  if(cur_letter == "O"){cur_letter = "N";};
+  if(cur_letter == "P"){cur_letter = "O";};
+  if(cur_letter == "Q"){cur_letter = "P";};
+  if(cur_letter == "R"){cur_letter = "Q";};
+  if(cur_letter == "S"){cur_letter = "R";};
+  if(cur_letter == "T"){cur_letter = "S";};
+  if(cur_letter == "U"){cur_letter = "T";};
+  if(cur_letter == "V"){cur_letter = "U";};
+  if(cur_letter == "W"){cur_letter = "V";};
+  if(cur_letter == "X"){cur_letter = "W";};
+  if(cur_letter == "Y"){cur_letter = "X";};
+  if(cur_letter == "Z"){cur_letter = "Y";};
+  if(cur_letter == " "){cur_letter = "Z";};
+ };
+};
+
+
+//STRING FUNCTION INPUT(VOID);
+string input() {
+ while(1==1) {
+  ClearScreen();
+  TextOut(0, LCD_LINE4, "Gib ein Wort oder Satz ein!");
+  TextOut(0, LCD_LINE5, letter_in);
+  TextOut(0, LCD_LINE6, "Jetziger Buchstabe: " + cur_letter);
+  
+  if(ButtonPressed(BTNRIGHT, false) == true) {
+   //"Increase" Letter
+   changeLetter(true);
+   
+  };
+
+  if(ButtonPressed(BTNLEFT, false) == true) {
+   //"Decrease" Letter
+   changeLetter(false);
+
+  };
+  
+  if(ButtonPressed(BTNCENTER, false) == true) {letter_in = letter_in + cur_letter;};
+  
+  if(ButtonPressed(BTNEXIT, false) == true) {break;};
+ };
+ 
+ return letter_in;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+task main() {
+ SetLongAbort(true);
+ TextOut(2, LCD_LINE3, "Drücke die graue Taste");
+ TextOut(2, LCD_LINE4, "2 Sekunden lang, um das");
+ TextOut(2, LCD_LINE5, "Program zu beenden!");
+ Wait(5000);
+ output = input();
+ TextOut(0, LCD_LINE1, output);
+ Wait(10000);
+}

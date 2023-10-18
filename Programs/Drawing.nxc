@@ -1,0 +1,30 @@
+#include "\Libraries\EasyCoding.nxc"
+
+task main() {
+ ClearScreen();
+
+ //Init Variables and Arrays
+ bool display[LCD_WIDTH][LCD_HEIGHT]; //"Bit"-Array as Screenbuffer
+ bool tmp[LCD_HEIGHT];
+ int set = 0;
+
+ for(int y=0; y < LCD_HEIGHT; y++) {
+  if(set < 2) {tmp[y] = set;
+  };
+  if(set > 4) {
+   set = 0;
+  };
+  set++;
+ };
+ 
+ for(int x=0; x < LCD_WIDTH; x++) {
+   display[x] = tmp;
+ };
+ 
+ for(int x=0; x < LCD_WIDTH; x++) {
+  for(int y=0; y < LCD_HEIGHT; y++) {
+   PointOut(x, y, (!display[x][y]) << 2);
+  };
+ };
+ while(true) {};
+};

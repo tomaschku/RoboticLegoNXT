@@ -1,0 +1,18 @@
+#include "\EasyCoding.nxc"
+
+task main() {
+ while(true) {
+  for (int line = 0; line <= 7; line++)
+  {
+   for (int column=0; column <= LCD_WIDTH/CHAR_WIDTH; column++)
+   {
+    TextOut(column*CHAR_WIDTH, LCD_LINE1-(line*8), NumToStr(rnd(0, 1)));
+    Wait(10);
+   };
+  };
+ };
+
+ /*cls();
+ CenterTextOut(LCD_LINE4, NumToStr(rnd(0, 2)));
+ pause();*/
+};

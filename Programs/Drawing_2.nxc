@@ -1,0 +1,11 @@
+
+#include "NBCCommon.h"
+
+task main() {
+ long val = 0;
+ while(true) {
+  SetDislayUpdateMask(val);
+  val++;
+  Wait(1000);
+ };
+}

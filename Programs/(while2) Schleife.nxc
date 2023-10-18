@@ -1,0 +1,14 @@
+task main()
+
+{
+SetSensorTouch(IN_1);
+
+while(1==1)
+           {
+           while(Sensor(IN_1)==0)
+                                {
+                                 OnFwd(OUT_AC,100);
+                                }
+           Off(OUT_AC);      
+           }
+}

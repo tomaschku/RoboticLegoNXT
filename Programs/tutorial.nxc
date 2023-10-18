@@ -1,0 +1,125 @@
+// Für einzeilige Kommentare (Am Ende eines Befehls oder Leere Zeile)
+
+/*
+ Mehrzeiliger
+ Kommentar
+*/
+
+/*task main() {//Start des Programmes
+
+ SetSensorLowspeed(IN_2);//Ultraschallsensor auf Anschluss 2
+
+ while(1==1) { //Endlosschleife, da '1' immer '1' ist
+ 
+  OnFwd(OUT_BC, 75); //Vorwärts gehen/fahren
+  Wait(200);
+  
+  if(SensorUS(IN_2) < 20) { //Wenn etwas beim Ultraschallsensor näher als ca. 20 mm ist, dann führe die Aktion aus...
+  
+   Off(OUT_BC); //Antrieb aus
+   
+   OnFwd(OUT_A, 100); //Stachel ausfahren
+   Wait(250);
+   OnRev(OUT_A, 50); //Stachel einziehen
+   Wait(750);
+   OnRev(OUT_A, 15); //Damit der Stachel nicht nach vorne fällt
+   
+  } else {//... Ansonsten führe diese Aktion aus
+  
+   //Dieser Teil musst nicht geschrieben werden, wenn er nicht gebraucht wird
+   
+  };
+ }
+} */
+
+/*
+Syntax der verwendeten Befehle:
+
+SetSensor#(IN_)
+# kann mit zum Beispiel mit diesen Werten ersetzt werden:
+Touch    für Tastsensor
+Lowspeed für Ultraschall
+...
+--------------------------------------
+Sensor(IN_)
+Lese den Wert eines Sensors (SensorUS(IN_) falls Ultraschall)
+--------------------------------------
+IN_ gleichbedeutent mit
+IN_1, IN_2, IN_3, IN_4
+--------------------------------------
+Wait(Millisekunden)
+Warte für x Millisekunden (1 Sekunde = 1000 Millisekunden)
+--------------------------------------
+Off(OUT_A)
+Motor ausmachen beim Anschluss A, B, C. (HBuchstaben intereinander, für mehrere Motoren)
+--------------------------------------
+OnFwd(OUT_B, y)
+Vorwärts mit y% Power
+OnRev(OUT_C, y)
+Rückwärts mit y% Power
+----------------------------------------------------------------------------
+while(Bedingung) {
+ Befehle
+}
+Bedingungen können alle vergleiche (< > == >= <= !=) oder 'true' enthalten
+Bei 'true' oder '1==1' wird die Schleife nie unterbrochen
+
+Bedingung kann auch eine Variable sein, die z.B. immer um 1 erhöht wird und
+folgendermaßen abgefragt wird:
+while(variable <= 10) {}
+----------------------------------------------------------------------------
+if(Bedingung) {
+ Ausführen wenn wahr
+} elseif(Bedingung2) {
+ Optional; Ausführen 2. Bedingung wenn wahr
+} else {
+ Optional; Ausführen, wenn nichts zutrifft
+}
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+task main() {//Programmstart
+ OnFwd(OUT_AC, 50); //Mit 50% Leistung auf den Motoren A & C vorwärts
+
+ while(1==1) {//Wenn Bedingung wahr, führe Aktionen innerhalb {} aus und prüfe nochmals
+ 
+  OnFwd(OUT_AC, 50); //Da 1==1 immer wahr ist, solange ausführen, bis das Programm abgebrochen wird
+  
+  Wait(1000); //Warten
+  
+  OnRev(OUT_AC, 49); //Rückwärts mit 49% Leistung
+ }
+ 
+ //Ende des Programms
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

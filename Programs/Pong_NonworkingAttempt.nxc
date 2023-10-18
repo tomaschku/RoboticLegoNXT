@@ -1,0 +1,104 @@
+#define HEIGHT 64
+#define WIDTH 100
+
+//Variables
+int player;
+int pc;
+int ball[];
+string who;
+
+
+
+//Functions:
+void draw() {//Draw Objects to Screen
+  RectOut(2, player, 5, 3, DRAW_OPT_FILL_SHAPE);
+  RectOut(96, pc, 5, 3, DRAW_OPT_FILL_SHAPE);
+  RectOut(ball[0], ball[1], 2, 2, DRAW_OPT_FILL_SHAPE);
+}
+
+
+
+task main() {
+ player=0;
+ pc=0;
+ who = "N/A";
+ //Format of Array "ball": [X, Y, DIRECTION]
+ //POSX=Left
+ //POSY=Bottom
+ //OLD! DIRECTION=LO|RO|LU|RU [Left|Over|Under|Right]
+ //NEW: DIRECTION=1|2|3|4
+
+ ball[0]= WIDTH/2;
+ ball[1]= HEIGHT/2;
+ ball[2]= 1;
+
+ while(true) {
+  ClearScreen();
+  draw();
+  
+  Wait(250);
+
+  //Left Player
+
+  if(Sensor(IN_1)  ==  true) {
+   if(player > HEIGHT) {
+    player=0;
+   } else {
+    player=player+1;
+   };
+  };
+  if(Sensor(IN_2)  ==  true) {
+   if(player < HEIGHT) {
+    player=HEIGHT;
+   } else {
+    player=player-1;
+   };
+  };
+
+  //Right Player (Computer)
+  
+  //Ball
+  //Diagonal
+
+  if(ball[2] == 1) {
+   ball[0] = ball[0]-1;
+   ball[1] = ball[1]-1;
+  };
+  if(ball[2] == 2) {
+   ball[0] = ball[0]+1;
+   ball[1] = ball[1]-1;
+  };
+  if(ball[2] == 3) {
+   ball[0] = ball[0]- 1;
+   ball[1] = ball[1]+1;
+  };
+  if(ball[2] == 4) {
+   ball[0] = ball[0]+1;
+   ball[1] = ball[1]+1;
+  };
+  
+  //"Who wins?" - Test
+  if(ball[0] > WIDTH) {
+   //You win
+   who = "You";
+   break;
+  };
+  if(ball[0] < 0) {
+   //NXT win
+   who = "NXT";
+   break;
+  };
+ };
+ 
+ //Someone wins
+ if(who != "N/A") {
+  if(who == "You") {
+   //You win
+   
+  };
+  if(who == "NXT") {
+   //NXT win
+
+  };
+ }
+}

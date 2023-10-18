@@ -1,0 +1,92 @@
+﻿//- = Untested
+
+ --> CONSTANTS:
+  LCD_WIDTH = 100 px
+ LCD_HEIGHT = 64  px
+CHAR_HEIGHT = 8   px
+ CHAR_WIDTH = 5   px
+   CHAR_ROW = 16
+CHAR_COLUMN = 8
+
+ --> STRUCTS:
+Rect{X, Y, X2, Y2, width, height}
+
+  -> FUNCTIONS:
+void Rect_X         (Rect &in) //Correct X
+void Rect_Y         (Rect &in) //Correct Y
+void Rect_X2        (Rect &in) //Correct X2
+void Rect_Y2        (Rect &in) //Correct Y2
+void Rect_width     (Rect &in) //Correct width
+void Rect_height    (Rect &in) //Correct height
+
+void Rect_RInit     (Rect &in, int X, int Y, int width, int height) //Calculates X2 and Y2 automatically
+void Rect_AInit     (Rect &in, int X, int Y, int X2, int Y2) //Calculates width and height automatically
+void Rect_Reset     (Rect &in) //Sets everything to 0 
+-void Rect_printable(Rect &out, Rect in) //Changes the Origin for printing
+-void Rect_print    (Rect in, bool prepared) //Prints
+
+/*Movement and Sizing Function are valualy restricted to the Screensize*/
+
+bool Rect_RMove   (Rect &in, int XMOV, int YMOV) //Movement in Pixels, ± supported
+bool Rect_AMove   (Rect &in, int X, int Y) //Sets to given position, directly
+bool Rect_RResize (Rect &in, int Nwidth, int Nheight) //Resizes and calculates X2 and Y2
+bool Rect_AResize (Rect &in, int X2, int Y2) //Resizes and calculates width and height
+-bool Rect_overlap(Rect rA, Rect rB) //Checks, if two Rects overlap 
+//http://answers.opencv.org/question/59544/percentage-of-overlap/
+//y Axe? - Testen!
+-char Rect_overlap_percent(Rect rA, Rect rB) //Returns % of Area overlapping
+-Rect Rect_overlap_rect(Rect rA, Rect rB) //Returns new Rect, which is the intersection
+
+ --> ENUMS:
+Get_Types{BOTH_CASES = 0, UPPERCASE_ONLY = 1, DOWNCASE_ONLY = 2}
+
+ --> EXTRA FUNCTIONS:
+long    rnd              (long min, long max) //RNG - Parameter inclusive
+
+bool   between           (int min, int max, int num) //True, if min > num > max, min/max exclusive
+long   map               (long x, long in_min, long in_max, long out_min, long out_max) //Remaps value, so it fits to the specified range
+long   limit             (int min, int max, int num) //Cuts off Values beyond range
+int    min               (int a, int b) //Returns smaller Number
+int    max               (int a, int b) //Returns bigger Number
+
+bool   getBTN_EXIT       () //Returns the AbortFlag
+void   BTN_EXIT          (bool wait_before_exit) //If true, it waits 2 Seconds before exiting
+bool   BTNPRESSED        (unsigned int btn, bool reset = false) //Alias for ButtonPressed, but reset ist normally inactive
+
+void   pause             (int btn = BTNCENTER, int check_delay = 10) //Waits for Press
+
+bool   str_isEmpty       (string str) //Is StrLen == 0?
+int    str_find_first_not(string str, char sym) //Finds the first pos., where char != sym
+int    str_find_last_not (string str, char sym) //Finds the last pos., where char != sym
+-string str_trim         (string str) //Trims leading/trailing spaces off
+
+bool   CenterTextOut     (int y, string txt)
+string CenterText        (string txt) //Returns centered text
+bool   RightTextOut      (int y, string txt)
+string RightText         (string txt) //Returns rightmost text
+bool   ScreenOut         (string txt[]) //Zero-based
+
+-int    GetNumber           (string msg, int min, int max, int switching_time = 100) //Inclusive
+-char   GetChar             (string msg, Get_Types cases, int switching_time = 100)
+
+-unsigned long getProgramRuntime() //Time in Ticks after Program start
+-unsigned long getTimespan      (unsigned long start = 1, unsigned long stop = 0) //If stop = 0, stop = CurrentTick()
+
+ --> ERROR HANDLING
+int ERR ~ Error Number
+
+Codes   |   Text
+--------|-------
+    0   | No Error
+    5   | (Center|Right)Text(Out): Length of txt is > 16 or 0
+    6   | ScreenOut: Arraylength of txt is not equal to 8
+    7   | ScreenOut: A string in txt is longer than 16
+   100  | Rect_RMove: XMOV or YMOVE out of Screen
+   101  | Rect_RMove: XMOV would move Rect out of Screen
+   102  | Rect_RMove: YMOV would move Rect out of Screen
+   110  | Rect_AMove: X or Y out of Screen
+   120  | Rect_RResize: Nwidth or Nheight are resizeing out of Screen
+   130  | Rect_AResize: X or Y out of Screen
+     | 
+     | 
+     | 

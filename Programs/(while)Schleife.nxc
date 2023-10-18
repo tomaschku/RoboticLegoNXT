@@ -1,0 +1,304 @@
+task main()
+{
+
+SetSensorTouch(IN_1);
+
+while(1==1)
+          {
+          while(Sensor(IN_1)==0)
+                               {
+                               TextOut(3, LCD_LINE1, "0");
+                               TextOut(9, LCD_LINE1, "0");
+                               TextOut(15, LCD_LINE1, "0");
+                               TextOut(21, LCD_LINE1, "0");
+                               TextOut(27, LCD_LINE1, "0");
+                               TextOut(33, LCD_LINE1, "0");
+                               TextOut(39, LCD_LINE1, "0");
+                               TextOut(45, LCD_LINE1, "0");
+                               TextOut(51, LCD_LINE1, "0");
+                               TextOut(57, LCD_LINE1, "0");
+                               TextOut(63, LCD_LINE1, "0");
+                               TextOut(69, LCD_LINE1, "0");
+                               TextOut(75, LCD_LINE1, "0");
+                               TextOut(81, LCD_LINE1, "0");
+                               TextOut(87, LCD_LINE1, "0");
+                               TextOut(93, LCD_LINE1, "0");
+                               TextOut(99, LCD_LINE1, "0");
+
+                               TextOut(3, LCD_LINE2, "0");
+                               TextOut(9, LCD_LINE2, "0");
+                               TextOut(15, LCD_LINE2, "0");
+                               TextOut(21, LCD_LINE2, "0");
+                               TextOut(27, LCD_LINE2, "0");
+                               TextOut(33, LCD_LINE2, "0");
+                               TextOut(39, LCD_LINE2, "0");
+                               TextOut(45, LCD_LINE2, "0");
+                               TextOut(51, LCD_LINE2, "0");
+                               TextOut(57, LCD_LINE2, "0");
+                               TextOut(63, LCD_LINE2, "0");
+                               TextOut(69, LCD_LINE2, "0");
+                               TextOut(75, LCD_LINE2, "0");
+                               TextOut(81, LCD_LINE2, "0");
+                               TextOut(87, LCD_LINE2, "0");
+                               TextOut(93, LCD_LINE2, "0");
+                               TextOut(99, LCD_LINE2, "0");
+
+                               TextOut(3, LCD_LINE3, "0");
+                               TextOut(9, LCD_LINE3, "0");
+                               TextOut(15, LCD_LINE3, "0");
+                               TextOut(21, LCD_LINE3, "0");
+                               TextOut(27, LCD_LINE3, "0");
+                               TextOut(33, LCD_LINE3, "0");
+                               TextOut(39, LCD_LINE3, "0");
+                               TextOut(45, LCD_LINE3, "0");
+                               TextOut(51, LCD_LINE3, "0");
+                               TextOut(57, LCD_LINE3, "0");
+                               TextOut(63, LCD_LINE3, "0");
+                               TextOut(69, LCD_LINE3, "0");
+                               TextOut(75, LCD_LINE3, "0");
+                               TextOut(81, LCD_LINE3, "0");
+                               TextOut(87, LCD_LINE3, "0");
+                               TextOut(93, LCD_LINE3, "0");
+                               TextOut(99, LCD_LINE3, "0");
+
+                               TextOut(3, LCD_LINE4, "0");
+                               TextOut(9, LCD_LINE4, "0");
+                               TextOut(15, LCD_LINE4, "0");
+                               TextOut(21, LCD_LINE4, "0");
+                               TextOut(27, LCD_LINE4, "0");
+                               TextOut(33, LCD_LINE4, "0");
+                               TextOut(39, LCD_LINE4, "0");
+                               TextOut(45, LCD_LINE4, "0");
+                               TextOut(51, LCD_LINE4, "0");
+                               TextOut(57, LCD_LINE4, "0");
+                               TextOut(63, LCD_LINE4, "0");
+                               TextOut(69, LCD_LINE4, "0");
+                               TextOut(75, LCD_LINE4, "0");
+                               TextOut(81, LCD_LINE4, "0");
+                               TextOut(87, LCD_LINE4, "0");
+                               TextOut(93, LCD_LINE4, "0");
+                               TextOut(99, LCD_LINE4, "0");
+                               
+                               TextOut(3, LCD_LINE5, "0");
+                               TextOut(9, LCD_LINE5, "0");
+                               TextOut(15, LCD_LINE5, "0");
+                               TextOut(21, LCD_LINE5, "0");
+                               TextOut(27, LCD_LINE5, "0");
+                               TextOut(33, LCD_LINE5, "0");
+                               TextOut(39, LCD_LINE5, "0");
+                               TextOut(45, LCD_LINE5, "0");
+                               TextOut(51, LCD_LINE5, "0");
+                               TextOut(57, LCD_LINE5, "0");
+                               TextOut(63, LCD_LINE5, "0");
+                               TextOut(69, LCD_LINE5, "0");
+                               TextOut(75, LCD_LINE5, "0");
+                               TextOut(81, LCD_LINE5, "0");
+                               TextOut(87, LCD_LINE5, "0");
+                               TextOut(93, LCD_LINE5, "0");
+                               TextOut(99, LCD_LINE5, "0");
+
+                               TextOut(3, LCD_LINE6, "0");
+                               TextOut(9, LCD_LINE6, "0");
+                               TextOut(15, LCD_LINE6, "0");
+                               TextOut(21, LCD_LINE6, "0");
+                               TextOut(27, LCD_LINE6, "0");
+                               TextOut(33, LCD_LINE6, "0");
+                               TextOut(39, LCD_LINE6, "0");
+                               TextOut(45, LCD_LINE6, "0");
+                               TextOut(51, LCD_LINE6, "0");
+                               TextOut(57, LCD_LINE6, "0");
+                               TextOut(63, LCD_LINE6, "0");
+                               TextOut(69, LCD_LINE6, "0");
+                               TextOut(75, LCD_LINE6, "0");
+                               TextOut(81, LCD_LINE6, "0");
+                               TextOut(87, LCD_LINE6, "0");
+                               TextOut(93, LCD_LINE6, "0");
+                               TextOut(99, LCD_LINE6, "0");
+
+                               TextOut(3, LCD_LINE7, "0");
+                               TextOut(9, LCD_LINE7, "0");
+                               TextOut(15, LCD_LINE7, "0");
+                               TextOut(21, LCD_LINE7, "0");
+                               TextOut(27, LCD_LINE7, "0");
+                               TextOut(33, LCD_LINE7, "0");
+                               TextOut(39, LCD_LINE7, "0");
+                               TextOut(45, LCD_LINE7, "0");
+                               TextOut(51, LCD_LINE7, "0");
+                               TextOut(57, LCD_LINE7, "0");
+                               TextOut(63, LCD_LINE7, "0");
+                               TextOut(69, LCD_LINE7, "0");
+                               TextOut(75, LCD_LINE7, "0");
+                               TextOut(81, LCD_LINE7, "0");
+                               TextOut(87, LCD_LINE7, "0");
+                               TextOut(93, LCD_LINE7, "0");
+                               TextOut(99, LCD_LINE7, "0");
+
+                               TextOut(3, LCD_LINE8, "0");
+                               TextOut(9, LCD_LINE8, "0");
+                               TextOut(15, LCD_LINE8, "0");
+                               TextOut(21, LCD_LINE8, "0");
+                               TextOut(27, LCD_LINE8, "0");
+                               TextOut(33, LCD_LINE8, "0");
+                               TextOut(39, LCD_LINE8, "0");
+                               TextOut(45, LCD_LINE8, "0");
+                               TextOut(51, LCD_LINE8, "0");
+                               TextOut(57, LCD_LINE8, "0");
+                               TextOut(63, LCD_LINE8, "0");
+                               TextOut(69, LCD_LINE8, "0");
+                               TextOut(75, LCD_LINE8, "0");
+                               TextOut(81, LCD_LINE8, "0");
+                               TextOut(87, LCD_LINE8, "0");
+                               TextOut(93, LCD_LINE8, "0");
+                               TextOut(99, LCD_LINE8, "0");
+                               }
+          ClearScreen();
+          
+          while(Sensor(IN_1)==1)
+                                {
+                               TextOut(3, LCD_LINE1, "1");
+                               TextOut(9, LCD_LINE1, "1");
+                               TextOut(15, LCD_LINE1, "1");
+                               TextOut(21, LCD_LINE1, "1");
+                               TextOut(27, LCD_LINE1, "1");
+                               TextOut(33, LCD_LINE1, "1");
+                               TextOut(39, LCD_LINE1, "1");
+                               TextOut(45, LCD_LINE1, "1");
+                               TextOut(51, LCD_LINE1, "1");
+                               TextOut(57, LCD_LINE1, "1");
+                               TextOut(63, LCD_LINE1, "1");
+                               TextOut(69, LCD_LINE1, "1");
+                               TextOut(75, LCD_LINE1, "1");
+                               TextOut(81, LCD_LINE1, "1");
+                               TextOut(87, LCD_LINE1, "1");
+                               TextOut(93, LCD_LINE1, "1");
+                               TextOut(99, LCD_LINE1, "1");
+
+                               TextOut(3, LCD_LINE2, "1");
+                               TextOut(9, LCD_LINE2, "1");
+                               TextOut(15, LCD_LINE2, "1");
+                               TextOut(21, LCD_LINE2, "1");
+                               TextOut(27, LCD_LINE2, "1");
+                               TextOut(33, LCD_LINE2, "1");
+                               TextOut(39, LCD_LINE2, "1");
+                               TextOut(45, LCD_LINE2, "1");
+                               TextOut(51, LCD_LINE2, "1");
+                               TextOut(57, LCD_LINE2, "1");
+                               TextOut(63, LCD_LINE2, "1");
+                               TextOut(69, LCD_LINE2, "1");
+                               TextOut(75, LCD_LINE2, "1");
+                               TextOut(81, LCD_LINE2, "1");
+                               TextOut(87, LCD_LINE2, "1");
+                               TextOut(93, LCD_LINE2, "1");
+                               TextOut(99, LCD_LINE2, "1");
+
+                               TextOut(3, LCD_LINE3, "1");
+                               TextOut(9, LCD_LINE3, "1");
+                               TextOut(15, LCD_LINE3, "1");
+                               TextOut(21, LCD_LINE3, "1");
+                               TextOut(27, LCD_LINE3, "1");
+                               TextOut(33, LCD_LINE3, "1");
+                               TextOut(39, LCD_LINE3, "1");
+                               TextOut(45, LCD_LINE3, "1");
+                               TextOut(51, LCD_LINE3, "1");
+                               TextOut(57, LCD_LINE3, "1");
+                               TextOut(63, LCD_LINE3, "1");
+                               TextOut(69, LCD_LINE3, "1");
+                               TextOut(75, LCD_LINE3, "1");
+                               TextOut(81, LCD_LINE3, "1");
+                               TextOut(87, LCD_LINE3, "1");
+                               TextOut(93, LCD_LINE3, "1");
+                               TextOut(99, LCD_LINE3, "1");
+
+                               TextOut(3, LCD_LINE4, "1");
+                               TextOut(9, LCD_LINE4, "1");
+                               TextOut(15, LCD_LINE4, "1");
+                               TextOut(21, LCD_LINE4, "1");
+                               TextOut(27, LCD_LINE4, "1");
+                               TextOut(33, LCD_LINE4, "1");
+                               TextOut(39, LCD_LINE4, "1");
+                               TextOut(45, LCD_LINE4, "1");
+                               TextOut(51, LCD_LINE4, "1");
+                               TextOut(57, LCD_LINE4, "1");
+                               TextOut(63, LCD_LINE4, "1");
+                               TextOut(69, LCD_LINE4, "1");
+                               TextOut(75, LCD_LINE4, "1");
+                               TextOut(81, LCD_LINE4, "1");
+                               TextOut(87, LCD_LINE4, "1");
+                               TextOut(93, LCD_LINE4, "1");
+                               TextOut(99, LCD_LINE4, "1");
+
+                               TextOut(3, LCD_LINE5, "1");
+                               TextOut(9, LCD_LINE5, "1");
+                               TextOut(15, LCD_LINE5, "1");
+                               TextOut(21, LCD_LINE5, "1");
+                               TextOut(27, LCD_LINE5, "1");
+                               TextOut(33, LCD_LINE5, "1");
+                               TextOut(39, LCD_LINE5, "1");
+                               TextOut(45, LCD_LINE5, "1");
+                               TextOut(51, LCD_LINE5, "1");
+                               TextOut(57, LCD_LINE5, "1");
+                               TextOut(63, LCD_LINE5, "1");
+                               TextOut(69, LCD_LINE5, "1");
+                               TextOut(75, LCD_LINE5, "1");
+                               TextOut(81, LCD_LINE5, "1");
+                               TextOut(87, LCD_LINE5, "1");
+                               TextOut(93, LCD_LINE5, "1");
+                               TextOut(99, LCD_LINE5, "1");
+
+                               TextOut(3, LCD_LINE6, "1");
+                               TextOut(9, LCD_LINE6, "1");
+                               TextOut(15, LCD_LINE6, "1");
+                               TextOut(21, LCD_LINE6, "1");
+                               TextOut(27, LCD_LINE6, "1");
+                               TextOut(33, LCD_LINE6, "1");
+                               TextOut(39, LCD_LINE6, "1");
+                               TextOut(45, LCD_LINE6, "1");
+                               TextOut(51, LCD_LINE6, "1");
+                               TextOut(57, LCD_LINE6, "1");
+                               TextOut(63, LCD_LINE6, "1");
+                               TextOut(69, LCD_LINE6, "1");
+                               TextOut(75, LCD_LINE6, "1");
+                               TextOut(81, LCD_LINE6, "1");
+                               TextOut(87, LCD_LINE6, "1");
+                               TextOut(93, LCD_LINE6, "1");
+                               TextOut(99, LCD_LINE6, "1");
+
+                               TextOut(3, LCD_LINE7, "1");
+                               TextOut(9, LCD_LINE7, "1");
+                               TextOut(15, LCD_LINE7, "1");
+                               TextOut(21, LCD_LINE7, "1");
+                               TextOut(27, LCD_LINE7, "1");
+                               TextOut(33, LCD_LINE7, "1");
+                               TextOut(39, LCD_LINE7, "1");
+                               TextOut(45, LCD_LINE7, "1");
+                               TextOut(51, LCD_LINE7, "1");
+                               TextOut(57, LCD_LINE7, "1");
+                               TextOut(63, LCD_LINE7, "1");
+                               TextOut(69, LCD_LINE7, "1");
+                               TextOut(75, LCD_LINE7, "1");
+                               TextOut(81, LCD_LINE7, "1");
+                               TextOut(87, LCD_LINE7, "1");
+                               TextOut(93, LCD_LINE7, "1");
+                               TextOut(99, LCD_LINE7, "1");
+
+                               TextOut(3, LCD_LINE8, "1");
+                               TextOut(9, LCD_LINE8, "1");
+                               TextOut(15, LCD_LINE8, "1");
+                               TextOut(21, LCD_LINE8, "1");
+                               TextOut(27, LCD_LINE8, "1");
+                               TextOut(33, LCD_LINE8, "1");
+                               TextOut(39, LCD_LINE8, "1");
+                               TextOut(45, LCD_LINE8, "1");
+                               TextOut(51, LCD_LINE8, "1");
+                               TextOut(57, LCD_LINE8, "1");
+                               TextOut(63, LCD_LINE8, "1");
+                               TextOut(69, LCD_LINE8, "1");
+                               TextOut(75, LCD_LINE8, "1");
+                               TextOut(81, LCD_LINE8, "1");
+                               TextOut(87, LCD_LINE8, "1");
+                               TextOut(93, LCD_LINE8, "1");
+                               TextOut(99, LCD_LINE8, "1");
+                                }
+          ClearScreen();
+            }
+}

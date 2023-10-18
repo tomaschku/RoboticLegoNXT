@@ -1,0 +1,124 @@
+//Define constans
+#define BTN1 0
+#define BTN2 1
+#define BTN3 2
+#define BTN4 3
+
+#define BTNEXIT BTN1
+#define BTNRIGHT BTN2
+#define BTNLEFT BTN3
+#define BTNCENTER BTN4
+#define NO_OF_BTNS 4
+
+
+//Create Variables
+int first_num;
+int second_num;
+int operator_num;
+int result;
+int stopwhile;
+int current_step;
+string operator;
+
+task main() {
+//Set Variables to a default value, so they don't make an error, when only skipping
+first_num=1;
+second_num=1;
+result=0;
+stopwhile=0;
+operator_num=1;
+operator="+";
+current_step=1;
+
+while(stopwhile==0) {//START WHILE-LOOP-----------------------------------------
+  ClearScreen();
+  TextOut(0, LCD_LINE5, NumToStr(first_num) + " " + operator + " " + NumToStr(second_num));
+
+  Wait(200); //Wait to slow down the dereasing/increasing of the number(s)
+  //Check if "Add 1" is pressed
+
+  //Edit the first number ------------------------------------------------------
+  if(current_step == 1) {
+    if(ButtonPressed(BTNRIGHT, false) == true) {
+      first_num++;
+    };
+
+    //Check if "Minus 1" is pressed
+    if(ButtonPressed(BTNLEFT, false) == true) {
+      first_num--;
+    };
+
+    //Set Step to 2 if "Next" is pressed
+    if(ButtonPressed(BTNCENTER, false) == true) {
+      current_step=2;
+      Wait(500);
+    };
+  };
+
+  //Edit the operator ----------------------------------------------------------
+  if(current_step == 2) {
+    //"Increase" operator if "add" is pressed
+    if(ButtonPressed(BTNRIGHT, false) == true) {
+      operator_num++;
+      if(operator_num > 4) {operator_num=1;};
+    };
+
+    //"Decrease" operator if "substract" is pressed
+    if(ButtonPressed(BTNLEFT, false) == true) {
+      operator_num--;
+      if(operator_num < 1) {operator_num=4;};
+    };
+
+    //Set Step to 3 if "Next" is pressed
+    if(ButtonPressed(BTNCENTER, false) == true) {
+      current_step=3;
+      Wait(500);
+    };
+  };
+
+  //Edit the second number -----------------------------------------------------
+  if(current_step == 3) {
+    if(ButtonPressed(BTNLEFT, false) == true) {
+     second_num--;
+    };
+
+    //Check if "Minus 1" is pressed
+    if(ButtonPressed(BTNRIGHT, false) == true) {
+      second_num++;
+    };
+
+    //Set Step to 4 if "Next" is pressed
+    if(ButtonPressed(BTNCENTER, false) == true) {
+      current_step=4;
+      Wait(500);
+    };
+  };
+
+  if(operator_num == 1) {operator="+";};
+  if(operator_num == 2) {operator="-";};
+  if(operator_num == 3) {operator="*";};
+  if(operator_num == 4) {operator="/";};
+  
+  //STOP WHILE
+  if(current_step == 4) {
+    stopwhile=1;
+    Wait(500);
+  };
+
+};//END WHILE-LOOP--------------------------------------------------------------
+
+//Calculate result
+if(operator_num == 1) {result=first_num+second_num;}
+if(operator_num == 2) {result=first_num-second_num;}
+if(operator_num == 3) {result=first_num*second_num;}
+if(operator_num == 4) {result=first_num/second_num;}
+Wait(500);
+
+//Output result
+ClearScreen();
+TextOut(0, LCD_LINE3, "Ergebnis:");
+TextOut(0, LCD_LINE4, NumToStr(first_num));
+while(true) {
+ if(ButtonPressed(BTNCENTER, false) == true) {break;};
+};
+}

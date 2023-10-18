@@ -1,0 +1,17 @@
+int x;
+
+task main()
+{
+x=20;
+repeat(20)
+            {
+            NumOut(10,LCD_LINE2,x);
+            PlayTone(300,750);
+            Wait(1000);
+            ClearScreen();
+            x=x-1;
+           }
+TextOut(40, LCD_LINE5, "START");
+PlayTone(1000,1000);
+Wait(5000);
+}

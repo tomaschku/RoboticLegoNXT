@@ -1,0 +1,6 @@
+task main()
+{
+OnFwdSync(OUT_AC,55,-17);
+Wait(8000);
+Off(OUT_AC);
+}

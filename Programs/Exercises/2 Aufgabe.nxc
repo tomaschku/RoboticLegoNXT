@@ -1,0 +1,16 @@
+task main()
+{
+OnFwdReg(OUT_AC,70,OUT_REGMODE_SYNC);
+
+Wait(4600);
+
+Off(OUT_AC);
+
+Wait(2500);
+
+OnRevReg(OUT_AC,50,OUT_REGMODE_SYNC);
+
+Wait(4000);
+
+Off(OUT_AC);
+}

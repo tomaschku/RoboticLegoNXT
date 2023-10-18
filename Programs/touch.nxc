@@ -1,0 +1,13 @@
+task main() {
+ SetSensorTouch(IN_1);
+ SetSensorTouch(IN_2);
+ SetSensorTouch(IN_3);
+ SetSensorTouch(IN_4);
+
+ while(true) {
+  TextOut(10, LCD_LINE3, NumToStr(Sensor(IN_1)));
+  TextOut(10, LCD_LINE4, NumToStr(Sensor(IN_2)));
+  TextOut(10, LCD_LINE5, NumToStr(Sensor(IN_3)));
+  TextOut(10, LCD_LINE6, NumToStr(Sensor(IN_4)));
+ }
+}

@@ -1,7 +1,5 @@
 #include "\EasyCoding\EasyCoding.nxc"
 
-//R = Right, L = Left, U = Up, D = Down
-
 #define dLCD_X DISPLAY_WIDTH //100          +1 = R
 #define dLCD_Y DISPLAY_HEIGHT //64          +1 = D
 #define dLCD_HX DISPLAY_WIDTH/2
@@ -16,17 +14,16 @@ void won(bool win);
 void AI();
 void debug();
 
-//===========VARIABLES===========
+//——————————————————————VARIABLES——————————————————————
 bool play;
 int iPLAYERY;
 int iPCY;
 int iBALLX;
 int iBALLY;
 int iBALLDIR; //Expected: 1=LU \ 2=RU \ 3=RD \ 4=LD   || Real: 1=LD \ 2=RD \ 3=RU \ 4=LU
-/* I don't know why the numbers and directions don't agree but it has worked somehow so who cares. */
 bool PCup;
 int iGameSpeed;
-//==========END VARIABLES==========
+//————————————————————END VARIABLES————————————————————
 
 task main() {
  //Initialize
@@ -41,7 +38,7 @@ task main() {
 
  SetSensorTouch(IN_1);
  SetSensorTouch(IN_2);
- BTN_EXIT_FLAG(true);
+ BTN_EXIT(true);
  
  //Game Loop
  while(play) {
@@ -54,15 +51,19 @@ task main() {
  };
 }
 
-//===========FUNCTIONS===========
+//——————————————————————FUNCTIONS——————————————————————
 void draw() {
  ClearScreen();
  RectOut(2, iPLAYERY, 3, 5, DRAW_OPT_NORMAL+DRAW_OPT_LOGICAL_XOR+DRAW_OPT_FILL_SHAPE);
  RectOut(dLCD_X - 6, iPCY, 3, 5, DRAW_OPT_NORMAL+DRAW_OPT_LOGICAL_XOR+DRAW_OPT_FILL_SHAPE);
  RectOut(iBALLX, iBALLY, 2, 2, DRAW_OPT_NORMAL+DRAW_OPT_LOGICAL_XOR+DRAW_OPT_FILL_SHAPE);
+ //RectOut(x, y, width, height, options);
 }
 void refresh() {
- //Something hasn't yet been patched here and I forgot how to fix it. Anyway...
+ /* ############################
+  * ########NOT PATCHED!########
+  * ############################
+  */
  if(BTNPRESSED(BTNLEFT) == 1) {iPLAYERY = iPLAYERY + dStep;} else {
   if(Sensor(IN_1) == 1) {iPLAYERY = iPLAYERY + dStep;};
  };
@@ -98,10 +99,11 @@ void bounds() {//Height: dLCD_Y - Height
  //PC
  if(iPCY >= TMP_MAXY) {iPCY = TMP_MAXY;};
  if(iPCY <= 0) {iPCY = 0;};
-
+ 
+ 
  //Ball
  //Bounce from Up/Down
- switch(iBALLDIR) {//From Left Top
+ switch(iBALLDIR) {//Von Links Oben
   case 1://LU
    if(iBALLY <= 0) {
     iBALLY = 0;
@@ -132,8 +134,8 @@ void bounds() {//Height: dLCD_Y - Height
     iBALLDIR = 3;
    };
    break;
-   // PLAYER: 4B*6H | 2 to the RIGHT
-   // PC: 4B*6H | 6 to the LEFT (4 Width, from the left: 4 + 2 Units distance = 6)
+   // PLAYER: 4B*6H | 2 nach RECHTS
+   // PC: 4B*6H | 6 nach LINKS (4 Breit, von links aus: 4 + 2Abstand = 6)
    // BALL: 3S
  };
  
@@ -167,9 +169,9 @@ void won(bool win) {
  if(win) {//Player
   TextOut(40, LCD_LINE4, "WON!");
  } else {//PC
-  TextOut(35, LCD_LINE4, "Lost...");
+  TextOut(35, LCD_LINE4, "Lose...");
  };
- BTN_EXIT_FLAG(false);
+ BTN_EXIT(false);
  Wait(10000);
 }
 void AI() {
@@ -184,7 +186,7 @@ void AI() {
  if(TMP_Y_DISTANCE > 1) {iPLAYERY = iPLAYERY + dStep;} else {iPLAYERY = iPLAYERY - dStep;};
 }
 void debug() {
- if(getBTN_EXIT_FLAG()) {
+ if(getBTN_EXIT()) {
   if(BTNPRESSED(BTNEXIT) == 1) {
    Stop(true);
   };
@@ -215,7 +217,7 @@ void debug() {
    ClearScreen();
    CenterTextOut(LCD_LINE2, "DEBUG MODE");
    CenterTextOut(LCD_LINE4, "Game Loop Delay");
-   CenterTextOut(LCD_LINE5, NumToStr(iGameSpeed) + "ms");
+   CenterTextOut(LCD_LINE5, NumToStr(iGameSpeed) + "MS");
    if(BTNPRESSED(BTNCENTER)) {
     debug = 3;
    };
@@ -231,4 +233,4 @@ void debug() {
   };
  };
 }
-//===========END FUNCTIONS========
+//———————————————————————END FUNCTIONS————————————————E

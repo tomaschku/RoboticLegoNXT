@@ -1,0 +1,62 @@
+task main()
+{
+TextOut(0, LCD_LINE1, "H");
+Wait(500);
+TextOut(6, LCD_LINE1, "a");
+Wait(500);
+TextOut(12, LCD_LINE1, "l");
+Wait(500);
+TextOut(18, LCD_LINE1, "l");
+Wait(500);
+TextOut(24, LCD_LINE1, "o");
+Wait(500);
+TextOut(30, LCD_LINE1, "!");
+Wait(500);
+TextOut(36, LCD_LINE1, "");
+Wait(500);
+TextOut(42, LCD_LINE1, "I");
+Wait(500);
+TextOut(48, LCD_LINE1, "c");
+Wait(500);
+TextOut(54, LCD_LINE1, "h");
+Wait(500);
+TextOut(60, LCD_LINE1, "");
+Wait(500);
+TextOut(66, LCD_LINE1, "b");
+Wait(500);
+TextOut(72, LCD_LINE1, "i");
+Wait(500);
+TextOut(78, LCD_LINE1, "n");
+Wait(500);
+TextOut(0, LCD_LINE2, "T");
+Wait(500);
+TextOut(6, LCD_LINE2, "H");
+Wait(500);
+TextOut(12, LCD_LINE2, "!");
+Wait(500);
+TextOut(18, LCD_LINE2, "");
+Wait(500);
+TextOut(24, LCD_LINE2, ":");
+Wait(500);
+TextOut(30, LCD_LINE2, "D");
+Wait(500);
+
+
+
+
+TextOut(0, LCD_LINE2, "");
+Wait(1000);
+TextOut(0, LCD_LINE3, "");
+Wait(1000);
+TextOut(0, LCD_LINE4, "");
+Wait(1000);
+TextOut(0, LCD_LINE5, "");
+Wait(1000);
+TextOut(0, LCD_LINE6, "");
+Wait(1000);
+TextOut(0, LCD_LINE7, "");
+Wait(1000);
+TextOut(0, LCD_LINE8, "");
+Wait(4000);
+ClearScreen();
+}

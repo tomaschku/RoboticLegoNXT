@@ -1,0 +1,26 @@
+//Nicht verfügbar
+#include "NXCDefs.h"
+
+task main() {
+ TextOut(0, LCD_LINE4, "Test Text");
+ IOMapWriteType DC;
+ byte DC_Val[] = {DISPLAY_CONTRAST_MAX};
+ DC.ModuleName = DisplayModuleName;
+ DC.Offset = DisplayOffsetContrast;
+ 
+ SysIOMapWrite(DC);
+ Wait(1500);
+
+ TextOut(0, LCD_LINE5, "Test Text");
+ Wait(1500);
+
+ DC_Val[0] = 0;
+ DC.Buffer = DC_Val[0];
+ 
+ SysIOMapWrite(DC);
+ Wait(1500);
+ 
+ TextOut(0, LCD_LINE6, "Test Text");
+ 
+ Wait(5000);
+};

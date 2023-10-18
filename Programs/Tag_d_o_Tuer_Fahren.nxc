@@ -1,0 +1,18 @@
+void FwdFor(byte ports, char pwr, unsigned int ms, bool instant)
+{
+ OnFwd(ports, pwr);
+ Wait(ms);
+ if(instant) { Off(ports); } else { Float(ports); };
+};
+
+task main()
+{
+ ClearScreen();
+ SetSensorLowspeed(IN_2);
+ 
+ while(true) {
+  if(SensorUS(IN_2) < 5) {
+   FwdFor(OUT_BC, 50, 500, true);
+  }
+ }
+}

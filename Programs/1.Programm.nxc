@@ -1,0 +1,16 @@
+task main()
+{
+OnFwd(OUT_A,80);
+OnFwd(OUT_B,80);
+OnFwd(OUT_C,80);
+Wait(2000);
+Off(OUT_C);
+Wait(2000);
+Off(OUT_A);
+OnFwd(OUT_C,80);
+Wait(3000);
+Off(OUT_ABC);
+OnFwd(OUT_ABC,100);
+Wait(2000);
+Off(OUT_ABC);
+}

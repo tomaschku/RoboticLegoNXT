@@ -1,0 +1,42 @@
+//Tag der offenen Tür Skorpion
+#define Antrieb OUT_AC     //Beide Antriebe, Links & Rechts
+#define Stachel OUT_B      //Motor vom Stachel
+#define Ulraschall IN_4    //Anschluss vom Utraschall
+#define Stachel_Touch IN_1 //Sensor am Stachel
+
+int count;
+
+task beep() {
+ while(true) {
+  if(Sensor(Stachel_Touch) == 1) {
+   ClearScreen();
+   TextOut(5, 36, "Wie es aussieht");
+   TextOut(5, 28, "      dich!");
+   PlayTone(500, 400); //Orig. TONE_FS7: 2960
+  };
+ }
+}
+
+task main() {
+ ClearScreen();
+ SetSensorTouch(Stachel_Touch);
+ SetSensorLowspeed(Ulraschall);
+ StartTask(beep);
+ 
+ while(true) {
+  TextOut(0, 36, " Wen erwischt es");
+  TextOut(0, 28, "   denn heute?");
+  OnFwdSync(Antrieb, 100, -10);
+  //OnFwd(Antrieb, 75);
+  Wait(200);
+  if(SensorUS(Ulraschall) < 22) {
+   Off(Antrieb);
+   OnFwd(Stachel, 100);
+   Wait(200);
+   OnRev(Stachel, 35);
+   Wait(750);
+   OnRev(Stachel, 20); //Damit der Stachel nicht nach vorne fällt
+   Wait(500);
+  }
+ }
+}

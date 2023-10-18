@@ -34,15 +34,15 @@ namespace NXT_Scan_Parser
             drawBox.Height = (Application.OpenForms[0].Height - 39) - (MenuStrip.Height + Tools_Panel.Height);
         }
 
-        private void Menu_ÖffneScan_Click(object sender, EventArgs e)
+        private void Menu_OpenScan_Click(object sender, EventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog
             {
-                Title = "Öffne die vom Scanner gespeicherte Datei...",
+                Title = "Open file saved by scanner",
                 SupportMultiDottedExtensions = true,
                 RestoreDirectory = true,
                 Multiselect = false,
-                Filter = "Alle Dateien (*.*)|*.*|NXT-Scans (*.bin)|*.bin",
+                Filter = "All Files (*.*)|*.*|NXT-Scans (*.bin)|*.bin",
                 FilterIndex = 2,
                 DereferenceLinks = true,
                 CheckPathExists = true,
@@ -108,7 +108,7 @@ namespace NXT_Scan_Parser
         {
             if (Scan_File_Path.Length == 0)
             {
-                MessageBox.Show("ParseScan: Keine Datei bereitgestellt.", "Fehlende Datei", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("ParseScan: No file selected.", "Missing file", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             };
 
@@ -163,7 +163,7 @@ namespace NXT_Scan_Parser
                 DefaultExt = ".png",
                 OverwritePrompt = true,
                 SupportMultiDottedExtensions = true,
-                Title = "Speichere als...",
+                Title = "Save as...",
                 Filter = ".png|*.png|.bmp|*.bmp|.ico|*.ico",
                 ValidateNames = true
             };

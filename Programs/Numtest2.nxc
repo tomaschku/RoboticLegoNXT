@@ -1,0 +1,41 @@
+int a;
+int b;
+int c;
+int d;
+int e;
+int f;
+int g;
+int h;
+
+task main()
+{
+a=0;
+b=0;
+c=0;
+d=0;
+e=0;
+f=0;
+g=0;
+h=0;
+
+while(1==1)
+          {
+          NumOut(44, LCD_LINE1, a);
+          NumOut(44, LCD_LINE2, b);
+          NumOut(44, LCD_LINE3, c);
+          NumOut(44, LCD_LINE4, d);
+          NumOut(44, LCD_LINE5, e);
+          NumOut(44, LCD_LINE6, f);
+          NumOut(44, LCD_LINE7, g);
+          NumOut(44, LCD_LINE8, h);
+          a=a+1;
+          b=b+2;
+          c=c+3;
+          d=d+4;
+          e=e+5;
+          f=f+6;
+          g=g+7;
+          h=h+8;
+          Wait(1000);
+          }
+}

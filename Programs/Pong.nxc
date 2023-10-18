@@ -1,0 +1,92 @@
+#define HEIGHT 64
+#define WIDTH 100
+//Spieler & Ball limitieren
+//Variables
+int player;
+int pc;
+int ball_x;
+int ball_y;
+int ball_dir;
+
+//Prototypes
+void draw();
+
+task main() {
+ SetSensorTouch(IN_1);
+ SetSensorTouch(IN_2);
+ player=0;
+ pc=0;
+ //POSX=Left
+ //POSY=Bottom
+ //OLD DIRECTION=LO|RO|LU|RU [Left|Over|Under|Right]
+ //NEW: DIRECTION=1|2 |3 |4
+
+ ball_x= WIDTH/2;
+ ball_y= HEIGHT/2;
+ ball_dir= 1;
+ 
+ while(true) {
+  ClearScreen();
+  draw();
+
+  Wait(250);
+
+  //Left Player
+  if(Sensor(IN_1)  ==  true) {
+   if(player > HEIGHT) {
+    player=0;
+   } else {
+    player=player+1;
+   };
+  };
+  if(Sensor(IN_2)  ==  true) {
+   if(player < HEIGHT) {
+    player=HEIGHT;
+   } else {
+    player=player-1;
+   };
+  };
+
+  //Right Player (Computer)
+  
+  //Ball
+  //Diagonal
+  if(ball_dir == 1) {
+   ball_x = ball_x - 1;
+   ball_y = ball_y - 1;
+  };
+  if(ball_dir == 2) {
+   ball_x = ball_x + 1;
+   ball_y = ball_y - 1;
+  };
+  if(ball_dir == 3) {
+   ball_x = ball_x - 1;
+   ball_y = ball_y + 1;
+  };
+  if(ball_dir == 4) {
+   ball_x = ball_x + 1;
+   ball_y = ball_y + 1;
+  };
+  //Test, if you or the Brick win
+  /*if(ball[0]>WIDTH) {
+   //You win
+   
+  };
+  if(ball[0]<WIDTH) {
+   //NXT win
+   
+  };*/
+ };
+
+}
+
+
+
+//Functions
+
+void draw() {//Draw Objects to Screen
+  RectOut(2, player, 5, 3, DRAW_OPT_FILL_SHAPE);
+  RectOut(96, pc, 5, 3, DRAW_OPT_FILL_SHAPE);
+  RectOut(ball_x, ball_y, 2, 2, DRAW_OPT_FILL_SHAPE);
+  
+}

@@ -1,0 +1,23 @@
+int a;
+int b;
+int c;
+
+task main ()
+{
+a=1;
+b=100;
+c=0;
+while(b<=3000)
+            {
+            a+=1;
+            b+=100;
+            c+=2;
+            OnFwd(OUT_A,c);
+            Wait(b);
+            OnRev(OUT_A,c);
+            Wait(b);
+            NumOut(48, LCD_LINE2, a);
+            NumOut(48, LCD_LINE3, b);
+            NumOut(48, LCD_LINE4, c);
+            }
+}

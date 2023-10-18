@@ -1,0 +1,56 @@
+int Speed = 100;
+int waittime = 0;
+
+task main() {
+ //Range of USSensor: 4 - 255cm; Output: 0 -255cm
+ SetSensorLowspeed(IN_1); //Front USSensor
+ SetSensorLowspeed(IN_2); //Back USSensor ~Remove?~
+
+ while(1==1) {//Main while-loop
+  while(1==1) {//Speed controlling while-loop
+   OnFwd(OUT_AB, Speed);
+
+   if(SensorUS(IN_1) > 100) {Speed = 100;};
+   if(SensorUS(IN_1) < 100) {Speed = Speed - 1;};
+   if(SensorUS(IN_1) < 100 && Speed == 0) {waittime = waittime + 1;};
+   if(waittime > 200) {
+    break;
+   };
+
+  };
+
+  RotateMotor(OUT_A, 50, 90);
+  RotateMotor(OUT_B, 50, -90);
+  Off(OUT_AB);
+  waittime = 0;
+  Speed = 100;
+ };
+}
+
+
+
+
+
+
+int rangeUS(string sensor_in) {//Control RAnge of SensorUS
+ switch(sensor_in) {
+       case "IN_1":
+                   //If USSensor is the front one
+                   if(SensorUS(IN_1) < 4) {return 4;};
+                   if(SensorUS(IN_1) > 200) {return 200;}; //200 because it's better to handle
+                   break;
+
+       case "IN_2":
+                   //If USSensor is the back one
+                   if(SensorUS(IN_2) < 4) {return 4;};
+                   if(SensorUS(IN_2) > 200) {return 200;}; //200 because it's better to handle
+                   break;
+
+       default:
+                   ClearScreen();
+                   TextOut(5, LCD_LINE1, "Error: No input in function [rangeUS();]");
+                   return 0;
+                   break;
+ };
+
+};

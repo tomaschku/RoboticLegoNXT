@@ -1,0 +1,27 @@
+task main()
+{
+TextOut(0, LCD_LINE1, "Hallo!");
+Wait(1000);
+ClearScreen();
+TextOut(0, LCD_LINE2, "Ich");
+Wait(1000);
+ClearScreen();
+TextOut(0, LCD_LINE3, "heise");
+Wait(1000);
+ClearScreen();
+TextOut(0, LCD_LINE4, "TH!");
+Wait(1000);
+ClearScreen();
+TextOut(0, LCD_LINE5, "Und");
+Wait(1000);
+ClearScreen();
+TextOut(0, LCD_LINE6, "auf");
+Wait(1000);
+ClearScreen();
+TextOut(0, LCD_LINE7, "nimmer");
+Wait(1000);
+ClearScreen();
+TextOut(0, LCD_LINE8, "Wiedersehen!");
+Wait(1000);
+ClearScreen();
+}

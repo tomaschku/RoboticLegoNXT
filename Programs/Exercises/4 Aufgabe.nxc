@@ -1,0 +1,10 @@
+task main()
+{
+TextOut(1, LCD_LINE1, "Hallo Welt!");
+Wait(2000);
+TextOut(1, LCD_LINE2, "Ich bin Robo.");
+Wait(2000);
+TextOut(1, LCD_LINE3, "Gute Nacht!");
+Wait(5000);
+ClearScreen();
+}
